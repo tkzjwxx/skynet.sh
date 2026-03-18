@@ -17,7 +17,7 @@
 ```bash
 apt-get update -y && apt-get install curl -y
 确认你的机器已经可以正常连网后，直接复制并执行以下命令。系统将在 2 分钟内自动完成双栈赋能、核心编译、沙盒开辟与大盘组装：
-curl -sSL "https://raw.githubusercontent.com/tkzjwxx/skynet.sh/main/install.sh" | bash
+apt-get update -y && apt-get install -y curl wget && curl -sSL "https://raw.githubusercontent.com/tkzjwxx/skynet.sh/main/install.sh" | bash
 核心操作手册
 系统部署完毕后，你可以在任意终端位置直接敲击以下快捷指令：
 
