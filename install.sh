@@ -1,8 +1,8 @@
 #!/bin/bash
 # ====================================================================
-# 天网系统 V10.22 (甬哥 WARP 缝合版 | 强制单栈 IPv4 保 SSH)
+# 天网系统 V10.23 (甬哥 WARP 手工断点介入版)
 # ====================================================================
-echo -e "\033[1;31m🔥 正在执行【天网 V10.22】全量创世重筑 (甬哥 WARP 缝合版)...\033[0m"
+echo -e "\033[1;31m🔥 正在执行【天网 V10.23】全量创世重筑 (手工断点版)...\033[0m"
 
 # 0. 强力拔除 HAX 废弃源
 sed -i '/virtuozzo/d' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null
@@ -18,40 +18,42 @@ apt-get install -y curl socat net-tools psmisc wget jq unzip tar openssl cron >/
 mkdir -p /etc/s-box/sub2 /etc/s-box/sub3
 
 # ====================================================================
-# 3. 🚨 核心战术：使用勇哥 WARP 引擎，强制接管单栈 IPv4
+# 3. 🚨 核心战术：挂起主程序，呼出勇哥 WARP 菜单交由人工接管
 # ====================================================================
-echo -e "\033[1;32m🌐 第一阶段：正在部署勇哥 WARP-GO 引擎，强抢 IPv4 出口...\033[0m"
+echo -e "\033[1;32m🌐 第一阶段：正在拉取勇哥 WARP 引擎...\033[0m"
 
-# 下载勇哥的 CFwarp 脚本至固定目录
-wget -N https://gitlab.com/rwkgyg/CFwarp/raw/main/CFwarp.sh -O /root/CFwarp.sh
+# 修复 GitLab 直链问题 (加入 /-/ 路径)
+wget -N https://gitlab.com/rwkgyg/CFwarp/-/raw/main/CFwarp.sh -O /root/CFwarp.sh
 chmod +x /root/CFwarp.sh
 
-# 卸载可能存在的旧版 WARP，防止冲突 (勇哥脚本菜单：3进入warp-go -> 4卸载)
-if [ -f "/usr/local/bin/warp-go" ] || [ -f "/usr/bin/warp-go" ]; then
-    printf "3\n4\n" | bash /root/CFwarp.sh >/dev/null 2>&1
-fi
+# 🚨 核心断点：交出控制权，人工介入
+echo -e "\n\033[1;45;37m ⏸️ 主脚本已挂起！即将唤出勇哥 WARP 菜单... \033[0m"
+echo -e "\033[1;36m👉 请根据你的机器情况手动安装 (纯v6机建议装双栈 或 单栈IPv4)。\033[0m"
+echo -e "\033[1;33m⚠️ 关键：安装成功并看到 WARP IP 后，请在菜单输入 0 退出勇哥脚本！\033[0m"
+echo -e "\033[1;33m⚠️ 退出后，天网主程序会自动恢复并接力跑完剩下的流程！\033[0m"
+sleep 5
 
-# 🚨 核心植入：模拟人工交互，全程静默安装
-# 依次输入: 3(选择 warp-go 方案) -> 1(安装/切换WARP-GO) -> 1(单栈 IPv4，保留原生 IPv6 防断连)
-printf "3\n1\n1\n" | bash /root/CFwarp.sh >/dev/null 2>&1
+# 执行勇哥脚本，将控制权交给用户
+bash /root/CFwarp.sh
 
-echo -e "\033[1;33m⏳ 正在校验 WARP IPv4 连通性...\033[0m"
+echo -e "\n\033[1;32m▶️ WARP 菜单已关闭，天网主程序恢复执行！\033[0m"
+echo -e "\033[1;33m⏳ 正在校验你刚才安装的 WARP IPv4 连通性...\033[0m"
 V4_READY=false
 for i in {1..6}; do
     WARP_IP=$(curl -s4 -m 5 api.ipify.org 2>/dev/null)
     if [ -n "$WARP_IP" ]; then
-        echo -e "\033[1;32m✅ WARP IPv4 获取成功！当前真实 IP: $WARP_IP\033[0m"
+        echo -e "\033[1;32m✅ WARP IPv4 获取成功！当前真实出站 IP: $WARP_IP\033[0m"
         V4_READY=true
         break
     else
-        echo -e "\033[1;35m⚠️ 未检测到 IPv4，WARP-GO 正在握手，第 $i 次重试...\033[0m"
+        echo -e "\033[1;35m⚠️ 未检测到 IPv4，WARP 正在握手，第 $i 次重试...\033[0m"
         sleep 5
     fi
 done
 
 if [ "$V4_READY" = false ]; then
-    echo -e "\n\033[1;41;37m 💀 致命错误：WARP-GO 无法获取 IPv4 地址！ \033[0m"
-    echo -e "\033[1;31m机器仍处于纯 IPv6 孤岛状态，强行下载必然损坏，部署已熔断。\033[0m"
+    echo -e "\n\033[1;41;37m 💀 致命错误：WARP 仍未获取到 IPv4 地址！ \033[0m"
+    echo -e "\033[1;31m你可能在刚才的菜单中没有安装成功，或节点受限。部署已熔断。\033[0m"
     exit 1
 fi
 
@@ -209,7 +211,7 @@ cat << 'EOF' > /usr/bin/c
 SLA_LOG="/etc/s-box/stability.log"
 draw_ui() {
     clear; echo -e "\033[1;36m=======================================================================================================================\033[0m"
-    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.22 (最终卷 · 真理大盘) 🛡️\033[0m"
+    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.23 (最终卷 · 真理大盘) 🛡️\033[0m"
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
     printf "%-6s | %-6s | %-16s | %-16s | %-10s | %-14s | %s\n" "通道" "国家" "锁定 IP (目标)" "当前真实 IP" "对外气闸" "持续存活时长" "健康状态及行动指示"
     echo "-----------------------------------------------------------------------------------------------------------------------"
@@ -286,7 +288,7 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload && systemctl enable --now w_master >/dev/null 2>&1
 
-# 10. 终极自毁退路：U 指令 (已同步更新勇哥卸载命令)
+# 10. 终极自毁退路：U 指令 (加入对本地脚本的清理)
 cat << 'EOF' > /usr/bin/u
 #!/bin/bash
 clear; echo -e "\033[1;31m⚠️ 警告：正在启动【天网自毁回滚程序】！\033[0m\n👉 确定要彻底焚毁天网并恢复白板吗？(输入 y 确认): \c"
@@ -298,8 +300,8 @@ rm -f /etc/systemd/system/w_master.service /etc/systemd/system/sing-box.service 
 systemctl daemon-reload
 pkill -9 -f psiphon-tunnel-core; pkill -9 -f sing-box; pkill -9 -f w_master; pkill -9 -f sl
 
-# 勇哥脚本专用静默卸载 (进入WARP-GO菜单 -> 选4卸载)
-[ -f "/root/CFwarp.sh" ] && printf "3\n4\n" | bash /root/CFwarp.sh >/dev/null 2>&1
+# 尝试调用勇哥脚本卸载
+[ -f "/root/CFwarp.sh" ] && echo -e "\033[1;33m👉 请在弹出的菜单中选择卸载 WARP\033[0m" && bash /root/CFwarp.sh
 
 rm -rf /etc/s-box /usr/local/bin/warp-go /usr/bin/warp-go /root/CFwarp.sh
 rm -f /usr/bin/s[1-3] /usr/bin/l[1-3] /usr/bin/sl[1-3] /usr/bin/c /usr/bin/ss
@@ -312,4 +314,4 @@ chmod +x /usr/bin/u
 # 11. 凌晨 4 点重启任务
 (crontab -l 2>/dev/null | grep -v "stability.log"; echo "0 4 * * * echo \"\$(date '+[%m-%d %H:%M:%S]') 🚀 === 凌晨 4:00 重置，开启新史记 ===\" > /etc/s-box/stability.log && /sbin/reboot") | crontab -
 
-echo -e "\n\033[1;32m🎉 天网系统 V10.22 (甬哥 WARP 缝合版) 部署完毕！\033[0m"
+echo -e "\n\033[1;32m🎉 天网系统 V10.23 (手工断点介入版) 部署完毕！\033[0m"
