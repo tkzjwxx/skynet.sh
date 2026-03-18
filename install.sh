@@ -1,18 +1,18 @@
 #!/bin/bash
 # ====================================================================
-# 天网系统 V11 (终极缝合大满配 | 4节点+独立旁路洗号+动静大盘分离)
+# 天网系统 V13 (Argo隧道专供版 | 6协议满配 + v键生成器)
 # ====================================================================
-echo -e "\033[1;31m🔥 正在执行【天网 V11】全量创世重筑...\033[0m"
+echo -e "\033[1;31m🔥 正在执行【天网 V13】全量创世重筑...\033[0m"
 
 # 0. 强力拔除 HAX 废弃源
 sed -i '/virtuozzo/d' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null
 
-# 1. 清理旧环境
+# 1. 清理旧环境 (保护 cloudflared 隧道进程不被误杀)
 systemctl stop psiphon1 psiphon2 psiphon3 psiphon4 sing-box w_master warp-go wg-quick@wgcf 2>/dev/null
 killall -9 w_master 2>/dev/null
-rm -rf /etc/s-box /usr/bin/c /usr/bin/ss /usr/bin/u /usr/bin/s[1-4] /usr/bin/l[1-4] /usr/bin/sl[1-4] /usr/bin/c[1-4]
+rm -rf /etc/s-box /usr/bin/c /usr/bin/ss /usr/bin/u /usr/bin/v /usr/bin/s[1-4] /usr/bin/l[1-4] /usr/bin/sl[1-4] /usr/bin/c[1-4]
 
-# 2. 基础依赖安装 (包含最新补充的 curl 和 wget)
+# 2. 基础依赖安装
 apt-get update -y >/dev/null 2>&1
 apt-get install -y curl wget socat net-tools psmisc jq unzip tar openssl cron nano >/dev/null 2>&1
 mkdir -p /etc/s-box/sub2 /etc/s-box/sub3 /etc/s-box/sub4 /etc/s-box/blacklist
@@ -35,86 +35,79 @@ curl -sL -o /root/CFwarp.sh https://raw.githubusercontent.com/yonggekkk/warp-yg/
 chmod +x /root/CFwarp.sh
 
 echo -e "\n\033[1;45;37m ⏸️ 主脚本已挂起！即将唤出勇哥 WARP 菜单... \033[0m"
-echo -e "\033[1;36m👉 请根据你的机器情况手动安装 (纯v6机建议装双栈 或 单栈IPv4)。\033[0m"
-echo -e "\033[1;33m⚠️ 关键：安装成功并看到 WARP IP 后，请在菜单输入 0 退出勇哥脚本！\033[0m"
-echo -e "\033[1;33m⚠️ 退出后，天网主程序会自动恢复并接力跑完剩下的流程！\033[0m"
+echo -e "\033[1;36m👉 请根据机器情况手动安装 (纯v6机建议装双栈 或 单栈IPv4)。\033[0m"
+echo -e "\033[1;33m⚠️ 关键：安装成功并看到 WARP IP 后，请在菜单输入 0 退出！\033[0m"
 sleep 5
 
 bash /root/CFwarp.sh
 
 echo -e "\n\033[1;32m▶️ WARP 菜单已关闭，天网主程序恢复执行！\033[0m"
-echo -e "\033[1;33m⏳ 正在校验你刚才安装的 WARP IPv4 连通性...\033[0m"
+echo -e "\033[1;33m⏳ 正在校验 WARP IPv4 连通性...\033[0m"
 V4_READY=false
 for i in {1..6}; do
     WARP_IP=$(curl -s4 -m 5 api.ipify.org 2>/dev/null)
     if [ -n "$WARP_IP" ]; then
-        echo -e "\033[1;32m✅ WARP IPv4 获取成功！当前真实出站 IP: $WARP_IP\033[0m"
+        echo -e "\033[1;32m✅ WARP IPv4 获取成功！出站 IP: $WARP_IP\033[0m"
         V4_READY=true
         break
     else
-        echo -e "\033[1;35m⚠️ 未检测到 IPv4，WARP 正在握手，第 $i 次重试...\033[0m"
+        echo -e "\033[1;35m⚠️ 未检测到 IPv4，重试中...\033[0m"
         sleep 5
     fi
 done
 
 if [ "$V4_READY" = false ]; then
-    echo -e "\n\033[1;41;37m 💀 致命错误：WARP 仍未获取到 IPv4 地址！ \033[0m"
-    echo -e "\033[1;31m你可能在刚才的菜单中没有安装成功，或节点受限。部署已熔断。\033[0m"
+    echo -e "\n\033[1;41;37m 💀 致命错误：WARP 未获取到 IPv4！部署熔断。\033[0m"
     exit 1
 fi
 
 # ====================================================================
-# 4. 有了 IPv4 护体，打捞核心组件如履平地
+# 4. 打捞核心组件
 # ====================================================================
-echo -e "\033[1;33m📦 第二阶段：凭 IPv4 护盾，打捞底层核心组件...\033[0m"
+echo -e "\033[1;33m📦 第二阶段：凭 IPv4 护盾拉取核心...\033[0m"
 curl -sL -A "Mozilla/5.0" -o /etc/s-box/psiphon-tunnel-core https://raw.githubusercontent.com/Psiphon-Labs/psiphon-tunnel-core-binaries/master/linux/psiphon-tunnel-core-x86_64
 chmod +x /etc/s-box/psiphon-tunnel-core
 
-echo -ne "正在向 GitHub API 请求 Sing-box 最新直链... "
+echo -ne "正在请求 Sing-box 最新直链... "
 S_URL=$(curl -sL --connect-timeout 5 -A "Mozilla/5.0" "https://api.github.com/repos/SagerNet/sing-box/releases/latest" | grep -o 'https://[^"]*linux-amd64\.tar\.gz' | head -n 1)
 
 if [[ -z "$S_URL" || "$S_URL" != *"github.com"* ]]; then
-    echo -e "[\033[1;33mAPI抓取异常，启用稳如老狗保底直链\033[0m]"
     S_URL="https://github.com/SagerNet/sing-box/releases/download/v1.10.1/sing-box-1.10.1-linux-amd64.tar.gz"
-else
-    echo -e "[\033[1;32m成功捕获最新官方直链！\033[0m]"
 fi
-
-echo -e "正在凭 IPv4 护盾官方直连拉取: \033[1;36m$S_URL\033[0m"
 curl -sL --connect-timeout 15 -A "Mozilla/5.0" -o /tmp/sbox.tar.gz "$S_URL"
 
 if [ -s /tmp/sbox.tar.gz ] && tar -tzf /tmp/sbox.tar.gz >/dev/null 2>&1; then
     tar -xzf /tmp/sbox.tar.gz -C /tmp/ 2>/dev/null
     mv -f /tmp/sing-box-*/sing-box /etc/s-box/sing-box 2>/dev/null
     chmod +x /etc/s-box/sing-box
-    echo -e "\033[1;32m✅ Sing-box 核心拉取并解压成功！\033[0m"
 else
-    echo -e "\n\033[1;41;37m 💀 致命错误：Sing-box 核心解压失败！文件可能已损坏。 \033[0m"
+    echo -e "\n\033[1;41;37m 💀 致命错误：Sing-box 解压失败！\033[0m"
     exit 1
 fi
 
-# 5. 配置核心路由与气闸 (扩充为 4 节点)
+# ====================================================================
+# 5. 配置核心路由与气闸 (深度复刻 6 协议入站规则)
+# ====================================================================
 cat << 'CONFIG_EOF' > /etc/s-box/sing-box.json
 {
   "log": {"level": "fatal"},
   "inbounds": [
-    { "type": "hysteria2", "tag": "hy2-1", "listen": "::", "listen_port": 8443, "users": [{"password": "PsiphonUS_2026"}], "tls": {"enabled": true, "server_name": "bing.com", "certificate_path": "/etc/s-box/hy2.crt", "key_path": "/etc/s-box/hy2.key"} },
-    { "type": "vmess", "tag": "vm-1", "listen": "127.0.0.1", "listen_port": 10001, "users": [{"uuid": "d3b2a1a1-5f2a-4a2a-8c2a-1a2a3a4a5a6a", "alterId": 0}], "transport": {"type": "ws", "path": "/s1"} },
-    { "type": "vmess", "tag": "vm-2", "listen": "127.0.0.1", "listen_port": 10002, "users": [{"uuid": "d3b2a1a1-5f2a-4a2a-8c2a-1a2a3a4a5a6a", "alterId": 0}], "transport": {"type": "ws", "path": "/s2"} },
-    { "type": "vmess", "tag": "vm-3", "listen": "127.0.0.1", "listen_port": 10003, "users": [{"uuid": "d3b2a1a1-5f2a-4a2a-8c2a-1a2a3a4a5a6a", "alterId": 0}], "transport": {"type": "ws", "path": "/s3"} },
-    { "type": "vmess", "tag": "vm-4", "listen": "127.0.0.1", "listen_port": 10004, "users": [{"uuid": "d3b2a1a1-5f2a-4a2a-8c2a-1a2a3a4a5a6a", "alterId": 0}], "transport": {"type": "ws", "path": "/s4"} }
+    { "type": "hysteria2", "tag": "hy2-in-1", "listen": "::", "listen_port": 8443, "users": [{"password": "PsiphonUS_2026"}], "tls": {"enabled": true, "server_name": "bing.com", "certificate_path": "/etc/s-box/hy2.crt", "key_path": "/etc/s-box/hy2.key"} },
+    { "type": "hysteria2", "tag": "hy2-in-2", "listen": "::", "listen_port": 8444, "users": [{"password": "PsiphonUS_2026"}], "tls": {"enabled": true, "server_name": "bing.com", "certificate_path": "/etc/s-box/hy2.crt", "key_path": "/etc/s-box/hy2.key"} },
+    { "type": "hysteria2", "tag": "hy2-in-3", "listen": "::", "listen_port": 8445, "users": [{"password": "PsiphonUS_2026"}], "tls": {"enabled": true, "server_name": "bing.com", "certificate_path": "/etc/s-box/hy2.crt", "key_path": "/etc/s-box/hy2.key"} },
+    { "type": "vmess", "tag": "vmess-in-1", "listen": "127.0.0.1", "listen_port": 10001, "users": [{"uuid": "d3b2a1a1-5f2a-4a2a-8c2a-1a2a3a4a5a6a", "alterId": 0}], "transport": {"type": "ws", "path": "/s1"} },
+    { "type": "vmess", "tag": "vmess-in-2", "listen": "127.0.0.1", "listen_port": 10002, "users": [{"uuid": "d3b2a1a1-5f2a-4a2a-8c2a-1a2a3a4a5a6a", "alterId": 0}], "transport": {"type": "ws", "path": "/s2"} },
+    { "type": "vmess", "tag": "vmess-in-3", "listen": "127.0.0.1", "listen_port": 10003, "users": [{"uuid": "d3b2a1a1-5f2a-4a2a-8c2a-1a2a3a4a5a6a", "alterId": 0}], "transport": {"type": "ws", "path": "/s3"} }
   ],
   "outbounds": [
-    { "type": "socks", "tag": "out-1", "server": "127.0.0.1", "server_port": 1081 },
-    { "type": "socks", "tag": "out-2", "server": "127.0.0.1", "server_port": 1082 },
-    { "type": "socks", "tag": "out-3", "server": "127.0.0.1", "server_port": 1083 },
-    { "type": "socks", "tag": "out-4", "server": "127.0.0.1", "server_port": 1084 }
+    { "type": "socks", "tag": "out-s1", "server": "127.0.0.1", "server_port": 1081 },
+    { "type": "socks", "tag": "out-s2", "server": "127.0.0.1", "server_port": 1082 },
+    { "type": "socks", "tag": "out-s3", "server": "127.0.0.1", "server_port": 1083 }
   ],
   "route": {"rules": [ 
-    {"inbound": ["hy2-1", "vm-1"], "outbound": "out-1"}, 
-    {"inbound": ["vm-2"], "outbound": "out-2"}, 
-    {"inbound": ["vm-3"], "outbound": "out-3"},
-    {"inbound": ["vm-4"], "outbound": "out-4"}
+    {"inbound": ["hy2-in-1", "vmess-in-1"], "outbound": "out-s1"}, 
+    {"inbound": ["hy2-in-2", "vmess-in-2"], "outbound": "out-s2"}, 
+    {"inbound": ["hy2-in-3", "vmess-in-3"], "outbound": "out-s3"} 
   ]}
 }
 CONFIG_EOF
@@ -132,7 +125,48 @@ WantedBy=multi-user.target
 SVC_EOF
 systemctl daemon-reload && systemctl enable --now sing-box >/dev/null 2>&1
 
-# 6. 初始化沙盒底层引擎 (全量生成基础配置与服务)
+# ====================================================================
+# 6. 生成专属节点链接与隧道配置指南 [v]
+# ====================================================================
+cat << 'EOF' > /usr/bin/v
+#!/bin/bash
+IP=$(curl -s6 -m 5 api64.ipify.org 2>/dev/null || curl -s6 -m 5 icanhazip.com 2>/dev/null)
+[ -z "$IP" ] && IP=$(ip -6 addr show dev eth0 2>/dev/null | grep -oP '(?<=inet6\s)[0-9a-fA-F:]+' | head -n 1)
+[ -z "$IP" ] && IP="[获取IPv6失败_请手动替换]"
+UUID="d3b2a1a1-5f2a-4a2a-8c2a-1a2a3a4a5a6a"
+PW="PsiphonUS_2026"
+
+clear
+echo -e "\033[1;36m=================================================================\033[0m"
+echo -e "\033[1;32m🎉 天网系统 V13 - 节点配置与 Cloudflare 隧道映射指南\033[0m"
+echo -e "\033[1;36m=================================================================\033[0m"
+
+echo -e "\n\033[1;35m【第一部分】Cloudflare Zero Trust 网页端隧道配置参数\033[0m"
+echo -e "请在 CF 隧道 (Tunnels) -> Public Hostname 建立 3 条映射记录："
+echo -e "👉 \033[1;33m绑定的子域名 1\033[0m (接管 S1) -> Service Type: \033[1;37mHTTP\033[0m, URL: \033[1;32mlocalhost:10001\033[0m"
+echo -e "👉 \033[1;33m绑定的子域名 2\033[0m (接管 S2) -> Service Type: \033[1;37mHTTP\033[0m, URL: \033[1;32mlocalhost:10002\033[0m"
+echo -e "👉 \033[1;33m绑定的子域名 3\033[0m (接管 S3) -> Service Type: \033[1;37mHTTP\033[0m, URL: \033[1;32mlocalhost:10003\033[0m"
+
+echo -e "\n\033[1;35m【第二部分】Argo 隧道 VMess 节点 (导入客户端后需替换域名)\033[0m"
+gen_vmess() {
+  local name=$1; local path=$2
+  local json="{\"v\":\"2\",\"ps\":\"$name\",\"add\":\"你的专属CF子域名\",\"port\":\"443\",\"id\":\"$UUID\",\"aid\":\"0\",\"net\":\"ws\",\"type\":\"none\",\"host\":\"你的专属CF子域名\",\"path\":\"$path\",\"tls\":\"tls\"}"
+  echo "vmess://$(echo -n "$json" | base64 -w 0)"
+}
+echo -e "🇺🇸 S1 战区 (映射端口 10001, 路径 /s1): \n\033[0m$(gen_vmess "Skynet-CF-S1" "/s1")"
+echo -e "\n🇬🇧 S2 战区 (映射端口 10002, 路径 /s2): \n\033[0m$(gen_vmess "Skynet-CF-S2" "/s2")"
+echo -e "\n🇯🇵 S3 战区 (映射端口 10003, 路径 /s3): \n\033[0m$(gen_vmess "Skynet-CF-S3" "/s3")"
+echo -e "\033[1;90m*(提示: 将导入后节点中的 '你的专属CF子域名' 换成你上面绑定的真实域名)\033[0m"
+
+echo -e "\n\033[1;35m【第三部分】直连 Hysteria2 节点 (IPv6 原生直通保底)\033[0m"
+echo -e "🇺🇸 S1 战区 (直连端口 8443): \n\033[0m hysteria2://$PW@[$IP]:8443/?sni=bing.com&insecure=1#Skynet-HY2-S1"
+echo -e "\n🇬🇧 S2 战区 (直连端口 8444): \n\033[0m hysteria2://$PW@[$IP]:8444/?sni=bing.com&insecure=1#Skynet-HY2-S2"
+echo -e "\n🇯🇵 S3 战区 (直连端口 8445): \n\033[0m hysteria2://$PW@[$IP]:8445/?sni=bing.com&insecure=1#Skynet-HY2-S3"
+echo -e "\n\033[1;36m=================================================================\033[0m"
+EOF
+chmod +x /usr/bin/v
+
+# 7. 初始化沙盒底层引擎
 for NODE in 1 2 3 4; do
     [ "$NODE" == "1" ] && { IN=2081; OUT=1081; DIR="/etc/s-box"; REG="US"; SVC="psiphon1"; }
     [ "$NODE" == "2" ] && { IN=2082; OUT=1082; DIR="/etc/s-box/sub2"; REG="GB"; SVC="psiphon2"; }
@@ -158,24 +192,22 @@ SVC_EOF
 done
 
 # ====================================================================
-# 7. 写入各节点的独立战术快捷键 (1-3 号为主战区，4 号为旁路洗号)
+# 8. 写入各节点的独立战术快捷键 (1-3 主战区，4 旁路洗号)
 # ====================================================================
-
-# 写入 1-3 号主战区快捷键 (s, l, sl, c)
 for NODE in 1 2 3; do
     [ "$NODE" == "1" ] && { IN_PORT=2081; OUT_PORT=1081; DIR="/etc/s-box"; REG="US"; SVC="psiphon1"; }
     [ "$NODE" == "2" ] && { IN_PORT=2082; OUT_PORT=1082; DIR="/etc/s-box/sub2"; REG="GB"; SVC="psiphon2"; }
     [ "$NODE" == "3" ] && { IN_PORT=2083; OUT_PORT=1083; DIR="/etc/s-box/sub3"; REG="JP"; SVC="psiphon3"; }
     
-    # c 清理黑名单引擎
+    # c 清理黑名单
     cat << EOF > /usr/bin/c${NODE}
 #!/bin/bash
-> "$DIR/tmp_pool.txt" 2>/dev/null
+> "\$DIR/tmp_pool.txt" 2>/dev/null
 echo -e "✅ \033[1;32mS${NODE} 鱼塘历史遗留已擦除！\033[0m\n"
 EOF
     chmod +x /usr/bin/c${NODE}
 
-    # S 安全抽卡引擎
+    # S 安全抽卡
     cat << EOF > /usr/bin/s${NODE}
 #!/bin/bash
 NODE="${NODE}"; IN_PORT="${IN_PORT}"; OUT_PORT="${OUT_PORT}"; DIR="${DIR}"; SVC="${SVC}"; SLA_LOG="/etc/s-box/stability.log"
@@ -223,7 +255,7 @@ fi
 EOF
     chmod +x /usr/bin/s${NODE}
 
-    # L 狂暴死磕引擎
+    # L 狂暴死磕
     cat << EOF > /usr/bin/l${NODE}
 #!/bin/bash
 NODE="${NODE}"; IN_PORT="${IN_PORT}"; OUT_PORT="${OUT_PORT}"; DIR="${DIR}"; SVC="${SVC}"; SLA_LOG="/etc/s-box/stability.log"
@@ -255,7 +287,7 @@ done
 EOF
     chmod +x /usr/bin/l${NODE}
 
-    # SL 寻回复苏引擎
+    # SL 寻回复苏
     cat << EOF > /usr/bin/sl${NODE}
 #!/bin/bash
 NODE="${NODE}"; IN_PORT="${IN_PORT}"; OUT_PORT="${OUT_PORT}"; DIR="${DIR}"; SVC="${SVC}"; SLA_LOG="/etc/s-box/stability.log"
@@ -267,7 +299,7 @@ while true; do
     ((ATTEMPTS++))
     if [ -f "\$DIR/s\${NODE}.manual" ]; then exit 0; fi
     if [ \$((\$(date +%s) - CHASE_START)) -ge 1200 ]; then
-        echo "\$(date '+[%m-%d %H:%M:%S]') 🌙 警告：S\${NODE} 追捕20分钟无果，触发防爆机制，进入深度休眠。" >> "\$SLA_LOG"
+        echo "\$(date '+[%m-%d %H:%M:%S]') 🌙 警告：S\${NODE} 追捕20分钟无果，防爆休眠。" >> "\$SLA_LOG"
         touch "\$DIR/s\${NODE}.hibernating"; systemctl stop "\$SVC" 2>/dev/null; exit 0
     fi
     echo "\$(date '+[%m-%d %H:%M:%S]') [TRACE] S\${NODE} 正在进行第 \$ATTEMPTS 次抽卡尝试..." >> "\$SLA_LOG"
@@ -285,7 +317,7 @@ EOF
     chmod +x /usr/bin/sl${NODE}
 done
 
-# 写入特殊的 4 号旁路洗号引擎 (S4 幽灵斥候)
+# 写入旁路 S4
 cat << 'EOF' > /usr/bin/s4
 #!/bin/bash
 DIR="/etc/s-box/sub4"; BLACKLIST_FILE="/etc/s-box/blacklist/bad_ips.txt"; SVC="psiphon4"; IN_PORT=2084
@@ -325,20 +357,16 @@ EOF
 chmod +x /usr/bin/s4
 
 # ====================================================================
-# 8. 全局大盘与后台守卫引擎
+# 9. 全局大盘与后台守卫引擎
 # ====================================================================
 
-# 全局大盘 c (动静分离版)
+# 全局大盘 c
 cat << 'EOF' > /usr/bin/c
 #!/bin/bash
-# ========================================================
-# 天网系统 V11 | 核心唯一指挥官 [c]
-# ========================================================
-
 draw_dashboard() {
     clear
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
-    echo -e "\033[1;37m                                   🛡️ 天网系统 V11 (全量生死录·动静分离版) 🛡️\033[0m"
+    echo -e "\033[1;37m                                   🛡️ 天网系统 V13 (全量生死录·动静分离版) 🛡️\033[0m"
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
     printf "%-6s | %-6s | %-16s | %-16s | %-10s | %-14s | %s\n" "通道" "国家" "锁定 IP (目标)" "当前真实 IP" "对外气闸" "持续存活时长" "健康状态及行动指示"
     echo "-----------------------------------------------------------------------------------------------------------------------"
@@ -378,14 +406,14 @@ fi
 EOF
 chmod +x /usr/bin/c
 
-# 动态监控入口 ss (仅通过调用 c --live 达到一直跑的目的)
+# 动态监控 ss 
 cat << 'EOF' > /usr/bin/ss
 #!/bin/bash
 /usr/bin/c --live
 EOF
 chmod +x /usr/bin/ss
 
-# 真理哨兵 w_master (监控 1-3 号主战区)
+# 真理哨兵 w_master
 cat > /usr/bin/w_master << 'EOF'
 #!/bin/bash
 SLA_LOG="/etc/s-box/stability.log"
@@ -454,7 +482,7 @@ EOF
 systemctl daemon-reload && systemctl enable --now w_master >/dev/null 2>&1
 
 # ====================================================================
-# 9. 终极自毁退路：U 指令
+# 10. 终极自毁退路：U 指令
 # ====================================================================
 cat << 'EOF' > /usr/bin/u
 #!/bin/bash
@@ -465,14 +493,14 @@ systemctl disable w_master sing-box psiphon1 psiphon2 psiphon3 psiphon4 >/dev/nu
 rm -f /etc/systemd/system/w_master.service /etc/systemd/system/sing-box.service /etc/systemd/system/psiphon*.service
 systemctl daemon-reload; pkill -9 -f psiphon-tunnel-core; pkill -9 -f sing-box; pkill -9 -f w_master; pkill -9 -f sl
 [ -f "/root/CFwarp.sh" ] && echo -e "\033[1;33m👉 请在弹出的菜单中选择卸载 WARP\033[0m" && bash /root/CFwarp.sh
-rm -rf /etc/s-box /usr/local/bin/warp-go /usr/bin/warp-go /root/CFwarp.sh /usr/bin/s[1-4] /usr/bin/l[1-4] /usr/bin/sl[1-4] /usr/bin/c[1-4] /usr/bin/c /usr/bin/ss /usr/bin/u
+rm -rf /etc/s-box /usr/local/bin/warp-go /usr/bin/warp-go /root/CFwarp.sh /usr/bin/s[1-4] /usr/bin/l[1-4] /usr/bin/sl[1-4] /usr/bin/c[1-4] /usr/bin/c /usr/bin/ss /usr/bin/u /usr/bin/v
 crontab -l 2>/dev/null | grep -v "stability.log" | crontab -
 sed -i '/prefer-family = IPv6/d' ~/.wgetrc 2>/dev/null
 echo "🎉 物理超度完毕！"
 EOF
 chmod +x /usr/bin/u
 
-# 10. 凌晨 4 点重启任务
+# 11. 凌晨 4 点重启任务
 (crontab -l 2>/dev/null | grep -v "stability.log"; echo "0 4 * * * echo \"\$(date '+[%m-%d %H:%M:%S]') 🚀 === 凌晨 4:00 重置，开启新史记 ===\" > /etc/s-box/stability.log && /sbin/reboot") | crontab -
 
-echo -e "\n\033[1;32m🎉 天网系统 V11 部署完毕！\033[0m"
+echo -e "\n\033[1;32m🎉 天网系统 V13 部署完毕！快输入 v 获取专属分享链接吧！\033[0m"
