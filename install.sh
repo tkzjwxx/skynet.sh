@@ -23,7 +23,7 @@ curl -sL -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome
 chmod +x /etc/s-box/psiphon-tunnel-core
 
 # 直接使用指挥官提供的官方绝版链接，不加任何镜像！
-S_URL="https://github.com/SagerNet/sing-box/releases/download/v1.13.3/sing-box-1.13.3-linux-amd64.tar.gz"
+S_URL="bash <(curl -Ls https://raw.githubusercontent.com/SagerNet/sing-box/main/install.sh)"
 
 echo -e "正在官方直连拉取: \033[1;36m$S_URL\033[0m"
 HTTP_CODE=$(curl -sL -w "%{http_code}" -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" -o /tmp/sbox.tar.gz "$S_URL")
