@@ -1,24 +1,19 @@
 #!/bin/bash
 # ====================================================================
-# 天网系统 V10.9 (最终封卷版 | 零隐患·全境通·含自毁退路)
+# 天网系统 V10.10 (最终封卷版 | 纯净无劫持·全境通·含自毁退路)
 # ====================================================================
-echo -e "\033[1;31m🔥 正在执行【天网 V10.9】全量创世重筑 (无懈可击版)...\033[0m"
+echo -e "\033[1;31m🔥 正在执行【天网 V10.10】全量创世重筑 (纯净本源版)...\033[0m"
 
-# 1. 暴力修复并锁定 DNS (解决 HAX/Woiden 解析失效)
-chattr -i /etc/resolv.conf 2>/dev/null
-echo -e "nameserver 8.8.8.8\nnameserver 1.1.1.1" > /etc/resolv.conf
-chattr +i /etc/resolv.conf 2>/dev/null
-
-# 2. 清理环境 (干净整洁是稳定的基础)
+# 1. 清理环境 (干净整洁是稳定的基础)
 systemctl stop psiphon1 psiphon2 psiphon3 psiphon4 sing-box w_master warp-go 2>/dev/null
 killall -9 w_master 2>/dev/null
 rm -rf /etc/s-box /usr/bin/c /usr/bin/ss /usr/bin/u /usr/bin/s[1-3] /usr/bin/l[1-3] /usr/bin/sl[1-3]
 
-# 3. 基础依赖安装
+# 2. 基础依赖安装
 apt-get update -y && apt-get install -y curl socat net-tools psmisc wget jq unzip tar openssl cron >/dev/null 2>&1
 mkdir -p /etc/s-box/sub2 /etc/s-box/sub3
 
-# 4. 核心组件打捞 (双源容错，绝不断流)
+# 3. 核心组件打捞 (双源容错，绝不断流)
 echo -e "\033[1;33m📦 正在打捞核心组件...\033[0m"
 wget -q --show-progress -O /etc/s-box/psiphon-tunnel-core https://raw.githubusercontent.com/Psiphon-Labs/psiphon-tunnel-core-binaries/master/linux/psiphon-tunnel-core-x86_64
 chmod +x /etc/s-box/psiphon-tunnel-core
@@ -26,16 +21,16 @@ chmod +x /etc/s-box/psiphon-tunnel-core
 S_VER="1.11.0"
 S_URL1="https://github.com/SagerNet/sing-box/releases/download/v${S_VER}/sing-box-${S_VER}-linux-amd64.tar.gz"
 S_URL2="https://ghp.ci/$S_URL1"
-# 优先尝试镜像，失败则直连
 wget -q --show-progress -O /tmp/sbox.tar.gz "$S_URL2" || wget -q --show-progress -O /tmp/sbox.tar.gz "$S_URL1"
 tar -xzf /tmp/sbox.tar.gz -C /tmp/ && mv -f /tmp/sing-box-*/sing-box /etc/s-box/sing-box && chmod +x /etc/s-box/sing-box
 
-# 5. WARP-GO 终极静默双栈注入
+# 4. WARP-GO 终极静默双栈注入
 echo -e "\033[1;32m🌐 正在织入 WARP-GO 双栈网络 (官方静默模式)...\033[0m"
 wget -qN https://raw.githubusercontent.com/fscarmen/warp/main/warp-go.sh
+# 终极解法：传参 d (Dualstack) 并通过 <<< "y" 回答所有确认提示，杜绝跳菜单！
 bash warp-go.sh d <<< "y" >/dev/null 2>&1
 
-# 6. 配置核心路由与气闸 (Sing-box)
+# 5. 配置核心路由与气闸 (Sing-box)
 cat << 'CONFIG_EOF' > /etc/s-box/sing-box.json
 {
   "log": {"level": "fatal"},
@@ -67,13 +62,12 @@ WantedBy=multi-user.target
 SVC_EOF
 systemctl daemon-reload && systemctl enable --now sing-box >/dev/null 2>&1
 
-# 7. 初始化沙盒底层引擎 & UI 指令注入
+# 6. 初始化沙盒底层引擎 & UI 指令注入
 for NODE in 1 2 3; do
     [ "$NODE" == "1" ] && { IN=2081; OUT=1081; DIR="/etc/s-box"; REG="US"; SVC="psiphon1"; }
     [ "$NODE" == "2" ] && { IN=2082; OUT=1082; DIR="/etc/s-box/sub2"; REG="GB"; SVC="psiphon2"; }
     [ "$NODE" == "3" ] && { IN=2083; OUT=1083; DIR="/etc/s-box/sub3"; REG="JP"; SVC="psiphon3"; }
     
-    # 写入基础配置
     cp /etc/s-box/psiphon-tunnel-core "$DIR/" 2>/dev/null
     cat > "$DIR/base.config" << P_EOF
 {"LocalHttpProxyPort":$((IN+16000)),"LocalSocksProxyPort":$IN,"PropagationChannelId":"FFFFFFFFFFFFFFFF","SponsorId":"FFFFFFFFFFFFFFFF","EgressRegion":"$REG","DataRootDirectory":"$DIR","RemoteServerListDownloadFilename":"remote_server_list","RemoteServerListSignaturePublicKey":"MIICIDANBgkqhkiG9w0BAQEFAAOCAg0AMIICCAKCAgEAt7Ls+/39r+T6zNW7GiVpJfzq/xvL9SBH5rIFnk0RXYEYavax3WS6HOD35eTAqn8AniOwiH+DOkvgSKF2caqk/y1dfq47Pdymtwzp9ikpB1C5OfAysXzBiwVJlCdajBKvBZDerV1cMvRzCKvKwRmvDmHgphQQ7WfXIGbRbmmk6opMBh3roE42KcotLFtqp0RRwLtcBRNtCdsrVsjiI1Lqz/lH+T61sGjSjQ3CHMuZYSQJZo/KrvzgQXpkaCTdbObxHqb6/+i1qaVOfEsvjoiyzTxJADvSytVtcTjijhPEV6XskJVHE1Zgl+7rATr/pDQkw6DPCNBS1+Y6fy7GstZALQXwEDN/qhQI9kWkHijT8ns+i1vGg00Mk/6J75arLhqcodWsdeG/M/moWgqQAnlZAGVtJI1OgeF5fsPpXu4kctOfuZlGjVZXQNW34aOzm8r8S0eVZitPlbhcPiR4gT/aSMz/wd8lZlzZYsje/Jr8u/YtlwjjreZrGRmG8KMOzukV3lLmMppXFMvl4bxv6YFEmIuTsOhbLTwFgh7KYNjodLj/LsqRVfwz31PgWQFTEPICV7GCvgVlPRxnofqKSjgTWI4mxDhBpVcATvaoBl1L/6WLbFvBsoAUBItWwctO2xalKxF5szhGm8lccoc5MZr8kfE0uxMgsxz4er68iCID+rsCAQM=","RemoteServerListUrl":"https://s3.amazonaws.com/psiphon/web/mjr4-p23r-puwl/server_list_compressed","UseIndistinguishableTLS":true}
@@ -91,7 +85,7 @@ WantedBy=multi-user.target
 SVC_EOF
     systemctl enable --now ${SVC} >/dev/null 2>&1
 
-    # 生成 S 引擎 (科技蓝)
+    # S 引擎 (科技蓝)
 cat << EOF > /usr/bin/s${NODE}
 #!/bin/bash
 DIR="$DIR"; IN="$IN"; SVC="$SVC"; SLA_LOG="/etc/s-box/stability.log"
@@ -115,7 +109,7 @@ else
 fi
 EOF
 
-    # 生成 L 引擎 (紫金尊贵)
+    # L 引擎 (紫金尊贵)
 cat << EOF > /usr/bin/l${NODE}
 #!/bin/bash
 DIR="$DIR"; IN="$IN"; SVC="$SVC"; SLA_LOG="/etc/s-box/stability.log"
@@ -129,7 +123,7 @@ IP=\$(curl -s -m 5 --socks5 127.0.0.1:\$IN api.ipify.org 2>/dev/null)
 if [ "\$IP" == "\$TAR" ]; then echo -e "\n\n\033[1;32m██████████████████████████████████████████████████████\n█   🎉 命中目标！死磕成功！\n█   🌟 极品 IP: \033[1;37m\$IP\033[1;32m\n██████████████████████████████████████████████████████\033[0m\n"; exit 0; fi; done
 EOF
 
-    # 生成 SL 后台引擎 (防端口冲突修复)
+    # SL 后台引擎 (防端口冲突修复)
 cat << EOF > /usr/bin/sl${NODE}
 #!/bin/bash
 DIR="$DIR"; IN="$IN"; OUT="$OUT"; SVC="$SVC"; SLA_LOG="/etc/s-box/stability.log"
@@ -144,7 +138,6 @@ IP=\$(curl -s -m 5 --socks5 127.0.0.1:\$IN api.ipify.org 2>/dev/null)
 if [ "\$IP" == "\$TAR" ]; then 
     rm -f "\$DIR/s${NODE}.hibernating"
     echo "\$(date '+[%m-%d %H:%M:%S]') 🟢 成功！S${NODE} 命中极品 IP：\$IP" >> "\$SLA_LOG"
-    # 🚨 终极防冲突：杀死旧气闸，再立新气闸
     fuser -k -9 "\$OUT/tcp" >/dev/null 2>&1
     socat TCP4-LISTEN:\$OUT,fork,reuseaddr TCP4:127.0.0.1:\$IN & 
     exit 0
@@ -154,13 +147,13 @@ EOF
     chmod +x /usr/bin/s${NODE} /usr/bin/l${NODE} /usr/bin/sl${NODE}
 done
 
-# 8. 指挥官大盘 c
+# 7. 指挥官大盘 c
 cat << 'EOF' > /usr/bin/c
 #!/bin/bash
 SLA_LOG="/etc/s-box/stability.log"
 draw_ui() {
     clear; echo -e "\033[1;36m=======================================================================================================================\033[0m"
-    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.9 (最终卷 · 真理大盘) 🛡️\033[0m"
+    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.10 (最终卷 · 真理大盘) 🛡️\033[0m"
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
     printf "%-6s | %-6s | %-16s | %-16s | %-10s | %-14s | %s\n" "通道" "国家" "锁定 IP (目标)" "当前真实 IP" "对外气闸" "持续存活时长" "健康状态及行动指示"
     echo "-----------------------------------------------------------------------------------------------------------------------"
@@ -194,14 +187,14 @@ fi
 EOF
 chmod +x /usr/bin/c
 
-# 9. 绝对物理级的 SS 脚本
+# 8. 绝对物理级的 SS 脚本
 cat << 'EOF' > /usr/bin/ss
 #!/bin/bash
 /usr/bin/c --live
 EOF
 chmod +x /usr/bin/ss
 
-# 10. 真理哨兵 w_master
+# 9. 真理哨兵 w_master
 cat > /usr/bin/w_master << 'EOF'
 #!/bin/bash
 SLA_LOG="/etc/s-box/stability.log"; APIS=("api.ipify.org" "icanhazip.com")
@@ -237,7 +230,7 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload && systemctl enable --now w_master >/dev/null 2>&1
 
-# 11. 终极自毁退路：U 指令 (安全精简版，不删主人私产)
+# 10. 终极自毁退路：U 指令
 cat << 'EOF' > /usr/bin/u
 #!/bin/bash
 clear; echo -e "\033[1;31m⚠️ 警告：正在启动【天网自毁回滚程序】！\033[0m\n👉 确定要彻底焚毁天网并恢复白板吗？(输入 y 确认): \c"
@@ -251,14 +244,13 @@ pkill -9 -f psiphon-tunnel-core; pkill -9 -f sing-box; pkill -9 -f w_master; pki
 bash <(curl -sSL https://raw.githubusercontent.com/fscarmen/warp/main/warp-go.sh) un >/dev/null 2>&1
 rm -rf /etc/s-box /usr/local/bin/warp-go /usr/bin/warp-go
 rm -f /usr/bin/s[1-3] /usr/bin/l[1-3] /usr/bin/sl[1-3] /usr/bin/c /usr/bin/ss
-# 🚨 终极防误杀：只删带有 stability.log 的那一行定时任务
 crontab -l 2>/dev/null | grep -v "stability.log" | crontab -
 echo -e "\033[1;32m🎉 物理超度完毕！VPS 已恢复纯净状态！\033[0m"
 rm -f /usr/bin/u
 EOF
 chmod +x /usr/bin/u
 
-# 12. 凌晨 4 点重启任务 (🚨 核心修复：每天清空旧史记，绝不臃肿)
+# 11. 凌晨 4 点重启任务 (🚨 核心修复：每天覆盖写入，绝不膨胀)
 (crontab -l 2>/dev/null | grep -v "stability.log"; echo "0 4 * * * echo \"\$(date '+[%m-%d %H:%M:%S]') 🚀 === 凌晨 4:00 重置，开启新史记 ===\" > /etc/s-box/stability.log && /sbin/reboot") | crontab -
 
-echo -e "\n\033[1;32m🎉 天网系统 V10.9 (最终封卷版) 部署完毕！\033[0m"
+echo -e "\n\033[1;32m🎉 天网系统 V10.10 (纯净版) 部署完毕！指令：c (大盘) | ss (实时) | u (卸载)\033[0m"
