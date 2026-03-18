@@ -10,11 +10,11 @@ apt-get update -y >/dev/null 2>&1
 apt-get install -y curl socat net-tools psmisc wget jq unzip tar openssl cron >/dev/null 2>&1
 mkdir -p /etc/s-box/sub2 /etc/s-box/sub3 /etc/s-box/sub4 /etc/s-box/blacklist
 
-# 2. 部署 WARP-GO (打通全球双栈)
-echo -e "\033[1;36m🌐 2/7 正在植入 WARP-GO，获取全球 IPv4 访问权限...\033[0m"
+# 2. 部署 WARP-GO (强制双栈模式)
+echo -e "\033[1;32m🌐 正在植入 WARP-GO 核心 (获取全球双栈出口)...\033[0m"
 wget -qN https://gitlab.com/fscarmen/warp/-/raw/main/warp-go.sh
 bash warp-go.sh 4 >/dev/null 2>&1
-sleep 8
+sleep 5
 
 # 3. 核心引擎官方直连拉取
 wget -q --show-progress -O /etc/s-box/psiphon-tunnel-core https://raw.githubusercontent.com/Psiphon-Labs/psiphon-tunnel-core-binaries/master/linux/psiphon-tunnel-core-x86_64
