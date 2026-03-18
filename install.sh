@@ -1,8 +1,8 @@
 #!/bin/bash
 # ====================================================================
-# 天网系统 V10.20 (最终封卷版 | 甬哥 WARP-YG 核心前置破局版)
+# 天网系统 V10.21 (最终封卷版 | 纯血 WARP-GO 强制单栈 IPv4 破局版)
 # ====================================================================
-echo -e "\033[1;31m🔥 正在执行【天网 V10.20】全量创世重筑 (Yongge WARP-YG 版)...\033[0m"
+echo -e "\033[1;31m🔥 正在执行【天网 V10.21】全量创世重筑 (纯血 WARP-GO 单栈版)...\033[0m"
 
 # 0. 强力拔除 HAX 废弃源
 sed -i '/virtuozzo/d' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null
@@ -18,38 +18,38 @@ apt-get install -y curl socat net-tools psmisc wget jq unzip tar openssl cron >/
 mkdir -p /etc/s-box/sub2 /etc/s-box/sub3
 
 # ====================================================================
-# 3. 🚨 核心战术反转：调用甬哥 warp-yg，强抢 IPv4
+# 3. 🚨 核心战术：使用纯血 WARP-GO 引擎，强制接管单栈 IPv4
 # ====================================================================
-echo -e "\033[1;32m🌐 第一阶段：正在调用甬哥 (warp-yg) 脚本，强抢 IPv4 出口...\033[0m"
+echo -e "\033[1;32m🌐 第一阶段：正在部署纯血 WARP-GO 引擎，强抢 IPv4 出口...\033[0m"
 
-# 卸载可能存在的 fscarmen 旧版 warp-go，防止冲突
+# 卸载可能存在的旧版 WARP，防止冲突
 if [ -f "/usr/local/bin/warp-go" ] || [ -f "/usr/bin/warp-go" ]; then
     bash <(curl -sL -6 https://raw.githubusercontent.com/fscarmen/warp/main/warp-go.sh) un >/dev/null 2>&1
 fi
 
-curl -sL -o CFwarp.sh https://raw.githubusercontent.com/yonggekkk/warp-yg/main/CFwarp.sh
-chmod +x CFwarp.sh
+curl -sL -6 -o warp-go.sh https://raw.githubusercontent.com/fscarmen/warp/main/warp-go.sh
+chmod +x warp-go.sh
 
-# 甬哥脚本对于纯 IPv6 机器，输入 1 为安装 WARP 单栈 IPv4。
-# 使用 echo "1" 自动管道应答安装菜单，彻底静默执行！
-echo "1" | bash CFwarp.sh >/dev/null 2>&1
+# 🚨 核心修正：传参 4 代表“仅接管 IPv4”，保留 HAX 原生的 IPv6 保证 SSH 不断连！
+# 这等同于在甬哥脚本中手动选择 warp-go 单栈模式，且全程静默。
+bash warp-go.sh 4 <<< "y" >/dev/null 2>&1
 
 echo -e "\033[1;33m⏳ 正在校验 WARP IPv4 连通性...\033[0m"
 V4_READY=false
-for i in {1..5}; do
+for i in {1..6}; do
     WARP_IP=$(curl -s4 -m 5 api.ipify.org 2>/dev/null)
     if [ -n "$WARP_IP" ]; then
         echo -e "\033[1;32m✅ WARP IPv4 获取成功！当前真实 IP: $WARP_IP\033[0m"
         V4_READY=true
         break
     else
-        echo -e "\033[1;35m⚠️ 未检测到 IPv4，正在进行第 $i 次重试...\033[0m"
+        echo -e "\033[1;35m⚠️ 未检测到 IPv4，WARP-GO 正在握手，第 $i 次重试...\033[0m"
         sleep 5
     fi
 done
 
 if [ "$V4_READY" = false ]; then
-    echo -e "\n\033[1;41;37m 💀 致命错误：甬哥 WARP-YG 无法获取 IPv4 地址！ \033[0m"
+    echo -e "\n\033[1;41;37m 💀 致命错误：WARP-GO 无法获取 IPv4 地址！ \033[0m"
     echo -e "\033[1;31m机器仍处于纯 IPv6 孤岛状态，强行下载必然损坏，部署已熔断。\033[0m"
     exit 1
 fi
@@ -58,22 +58,22 @@ fi
 # 4. 有了 IPv4 护体，打捞核心组件如履平地 (API 动态捕获直链)
 # ====================================================================
 echo -e "\033[1;33m📦 第二阶段：凭 IPv4 护盾，打捞底层核心组件...\033[0m"
-curl -sL -o /etc/s-box/psiphon-tunnel-core https://raw.githubusercontent.com/Psiphon-Labs/psiphon-tunnel-core-binaries/master/linux/psiphon-tunnel-core-x86_64
+curl -sL -A "Mozilla/5.0" -o /etc/s-box/psiphon-tunnel-core https://raw.githubusercontent.com/Psiphon-Labs/psiphon-tunnel-core-binaries/master/linux/psiphon-tunnel-core-x86_64
 chmod +x /etc/s-box/psiphon-tunnel-core
 
 # 🚨 杜绝硬编码版本号：直接向 GitHub API 请求最新的 linux-amd64.tar.gz 直链
 echo -ne "正在向 GitHub API 请求 Sing-box 最新直链... "
-S_URL=$(curl -s --connect-timeout 5 "https://api.github.com/repos/SagerNet/sing-box/releases/latest" | grep "browser_download_url" | grep "linux-amd64.tar.gz" | head -n 1 | cut -d '"' -f 4)
+S_URL=$(curl -sL --connect-timeout 5 -A "Mozilla/5.0" "https://api.github.com/repos/SagerNet/sing-box/releases/latest" | grep "browser_download_url" | grep "linux-amd64.tar.gz" | head -n 1 | cut -d '"' -f 4)
 
 if [ -z "$S_URL" ]; then
     echo -e "[\033[1;33mAPI受限，启用稳如老狗保底直链\033[0m]"
-    S_URL="https://github.com/SagerNet/sing-box/releases/download/v1.11.0/sing-box-1.11.0-linux-amd64.tar.gz"
+    S_URL="https://github.com/SagerNet/sing-box/releases/download/v1.13.3/sing-box-1.13.3-linux-amd64.tar.gz"
 else
     echo -e "[\033[1;32m成功捕获最新官方直链！\033[0m]"
 fi
 
 echo -e "正在凭 IPv4 护盾官方直连拉取: \033[1;36m$S_URL\033[0m"
-curl -sL --connect-timeout 10 -o /tmp/sbox.tar.gz "$S_URL"
+curl -sL --connect-timeout 15 -A "Mozilla/5.0" -o /tmp/sbox.tar.gz "$S_URL"
 
 if [ -s /tmp/sbox.tar.gz ] && tar -tzf /tmp/sbox.tar.gz >/dev/null 2>&1; then
     tar -xzf /tmp/sbox.tar.gz -C /tmp/ 2>/dev/null
@@ -81,7 +81,7 @@ if [ -s /tmp/sbox.tar.gz ] && tar -tzf /tmp/sbox.tar.gz >/dev/null 2>&1; then
     chmod +x /etc/s-box/sing-box
     echo -e "\033[1;32m✅ Sing-box 核心拉取并解压成功！\033[0m"
 else
-    echo -e "\n\033[1;41;37m 💀 致命错误：Sing-box 核心解压失败！可能被拦截或未下完整。 \033[0m"
+    echo -e "\n\033[1;41;37m 💀 致命错误：Sing-box 核心解压失败！文件可能已损坏。 \033[0m"
     exit 1
 fi
 
@@ -208,7 +208,7 @@ cat << 'EOF' > /usr/bin/c
 SLA_LOG="/etc/s-box/stability.log"
 draw_ui() {
     clear; echo -e "\033[1;36m=======================================================================================================================\033[0m"
-    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.20 (最终卷 · 真理大盘) 🛡️\033[0m"
+    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.21 (最终卷 · 真理大盘) 🛡️\033[0m"
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
     printf "%-6s | %-6s | %-16s | %-16s | %-10s | %-14s | %s\n" "通道" "国家" "锁定 IP (目标)" "当前真实 IP" "对外气闸" "持续存活时长" "健康状态及行动指示"
     echo "-----------------------------------------------------------------------------------------------------------------------"
@@ -285,7 +285,7 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload && systemctl enable --now w_master >/dev/null 2>&1
 
-# 10. 终极自毁退路：U 指令 (适配甬哥脚本卸载逻辑)
+# 10. 终极自毁退路：U 指令
 cat << 'EOF' > /usr/bin/u
 #!/bin/bash
 clear; echo -e "\033[1;31m⚠️ 警告：正在启动【天网自毁回滚程序】！\033[0m\n👉 确定要彻底焚毁天网并恢复白板吗？(输入 y 确认): \c"
@@ -296,9 +296,9 @@ systemctl disable w_master sing-box psiphon1 psiphon2 psiphon3 psiphon4 >/dev/nu
 rm -f /etc/systemd/system/w_master.service /etc/systemd/system/sing-box.service /etc/systemd/system/psiphon*.service
 systemctl daemon-reload
 pkill -9 -f psiphon-tunnel-core; pkill -9 -f sing-box; pkill -9 -f w_master; pkill -9 -f sl
-# 调用甬哥脚本内置的卸载命令
-bash <(curl -sL https://raw.githubusercontent.com/yonggekkk/warp-yg/main/CFwarp.sh) un >/dev/null 2>&1
-rm -rf /etc/s-box /usr/bin/s[1-3] /usr/bin/l[1-3] /usr/bin/sl[1-3] /usr/bin/c /usr/bin/ss /CFwarp.sh
+bash <(curl -sL -6 https://raw.githubusercontent.com/fscarmen/warp/main/warp-go.sh) un >/dev/null 2>&1
+rm -rf /etc/s-box /usr/local/bin/warp-go /usr/bin/warp-go /CFwarp.sh
+rm -f /usr/bin/s[1-3] /usr/bin/l[1-3] /usr/bin/sl[1-3] /usr/bin/c /usr/bin/ss
 crontab -l 2>/dev/null | grep -v "stability.log" | crontab -
 echo -e "\033[1;32m🎉 物理超度完毕！VPS 已恢复纯净状态！\033[0m"
 rm -f /usr/bin/u
@@ -308,4 +308,4 @@ chmod +x /usr/bin/u
 # 11. 凌晨 4 点重启任务
 (crontab -l 2>/dev/null | grep -v "stability.log"; echo "0 4 * * * echo \"\$(date '+[%m-%d %H:%M:%S]') 🚀 === 凌晨 4:00 重置，开启新史记 ===\" > /etc/s-box/stability.log && /sbin/reboot") | crontab -
 
-echo -e "\n\033[1;32m🎉 天网系统 V10.20 (甬哥护航版) 部署完毕！\033[0m"
+echo -e "\n\033[1;32m🎉 天网系统 V10.21 (纯血破局版) 部署完毕！\033[0m"
