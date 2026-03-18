@@ -1,11 +1,8 @@
 #!/bin/bash
 # ====================================================================
-# 天网系统 V10.17 (最终卷 | 摒弃镜像垃圾·官方直连绝对纯净版)
+# 天网系统 V10.19 (最终卷 | 破局先锋：WARP IPv4 前置抢占版)
 # ====================================================================
-echo -e "\033[1;31m🔥 正在执行【天网 V10.17】全量创世重筑 (官方直连纯净版)...\033[0m"
-
-# 0. 强力拔除废弃源
-sed -i '/virtuozzo/d' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null
+echo -e "\033[1;31m🔥 正在执行【天网 V10.19】全量创世重筑 (WARP 前置破局版)...\033[0m"
 
 # 1. 清理旧环境
 systemctl stop psiphon1 psiphon2 psiphon3 psiphon4 sing-box w_master warp-go 2>/dev/null
@@ -17,36 +14,58 @@ apt-get update -y >/dev/null 2>&1
 apt-get install -y curl socat net-tools psmisc wget jq unzip tar openssl cron >/dev/null 2>&1
 mkdir -p /etc/s-box/sub2 /etc/s-box/sub3
 
-# 3. 核心组件打捞 (🚨 绝对服从指令：只用官方直连)
-echo -e "\033[1;33m📦 正在打捞底层核心组件...\033[0m"
-curl -sL -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" -o /etc/s-box/psiphon-tunnel-core https://raw.githubusercontent.com/Psiphon-Labs/psiphon-tunnel-core-binaries/master/linux/psiphon-tunnel-core-x86_64
-chmod +x /etc/s-box/psiphon-tunnel-core
+# ====================================================================
+# 3. 🚨 核心战术反转：先强上 WARP-GO，抢占 IPv4 通道！
+# ====================================================================
+echo -e "\033[1;32m🌐 第一阶段：正在强攻 WARP-GO 双栈网络，抢夺 IPv4 出口...\033[0m"
+# 强制使用 IPv6 连通 GitHub 下载脚本，防止 NAT64 瘫痪
+curl -sL -6 -o warp-go.sh https://raw.githubusercontent.com/fscarmen/warp/main/warp-go.sh
+bash warp-go.sh d <<< "y" >/dev/null 2>&1
 
-# 直接使用指挥官提供的官方绝版链接，不加任何镜像！
-S_URL="bash <(curl -Ls https://raw.githubusercontent.com/SagerNet/sing-box/main/install.sh)"
+# 强力轮询：死磕 IPv4 获取状态
+echo -e "\033[1;33m⏳ 正在校验 WARP IPv4 连通性...\033[0m"
+V4_READY=false
+for i in {1..5}; do
+    WARP_IP=$(curl -s4 -m 5 api.ipify.org 2>/dev/null)
+    if [ -n "$WARP_IP" ]; then
+        echo -e "\033[1;32m✅ WARP IPv4 获取成功！当前真实 IP: $WARP_IP\033[0m"
+        V4_READY=true
+        break
+    else
+        echo -e "\033[1;35m⚠️ 未检测到 IPv4，正在重启 WARP 引擎进行第 $i 次重试...\033[0m"
+        systemctl restart warp-go >/dev/null 2>&1
+        sleep 5
+    fi
+done
 
-echo -e "正在官方直连拉取: \033[1;36m$S_URL\033[0m"
-HTTP_CODE=$(curl -sL -w "%{http_code}" -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" -o /tmp/sbox.tar.gz "$S_URL")
-
-# 强制校验
-if [ "$HTTP_CODE" == "200" ] && [ -s /tmp/sbox.tar.gz ] && tar -tzf /tmp/sbox.tar.gz >/dev/null 2>&1; then
-    tar -xzf /tmp/sbox.tar.gz -C /tmp/ 2>/dev/null
-    mv -f /tmp/sing-box-*/sing-box /etc/s-box/sing-box 2>/dev/null
-    chmod +x /etc/s-box/sing-box
-    echo -e "\033[1;32m✅ Sing-box 核心官方直连拉取并解压成功！\033[0m"
-else
-    echo -e "\n\033[1;41;37m 💀 致命错误：Sing-box 核心官方拉取失败！(HTTP 状态码: $HTTP_CODE) \033[0m"
-    echo -e "\033[1;31m请检查 VPS 是否能正常连接 GitHub 官网。\033[0m"
+if [ "$V4_READY" = false ]; then
+    echo -e "\n\033[1;41;37m 💀 致命错误：WARP-GO 无法获取 IPv4 地址！ \033[0m"
+    echo -e "\033[1;31m机器仍处于纯 IPv6 孤岛状态，强行下载必然损坏，部署已熔断。\033[0m"
+    echo -e "建议：输入 warp-go 尝试手动更换节点，或稍后再试。"
     exit 1
 fi
 
-# 4. WARP-GO 终极静默双栈注入
-echo -e "\033[1;32m🌐 正在织入 WARP-GO 双栈网络 (官方静默模式)...\033[0m"
-curl -sL -o warp-go.sh https://raw.githubusercontent.com/fscarmen/warp/main/warp-go.sh
-bash warp-go.sh d <<< "y" >/dev/null 2>&1
+# ====================================================================
+# 4. 有了 IPv4 护体，打捞核心组件如履平地
+# ====================================================================
+echo -e "\033[1;33m📦 第二阶段：凭 IPv4 护盾，打捞底层核心组件...\033[0m"
+curl -sL -o /etc/s-box/psiphon-tunnel-core https://raw.githubusercontent.com/Psiphon-Labs/psiphon-tunnel-core-binaries/master/linux/psiphon-tunnel-core-x86_64
+chmod +x /etc/s-box/psiphon-tunnel-core
 
-if [ ! -f "/usr/local/bin/warp-go" ] && [ ! -f "/usr/bin/warp-go" ]; then
-    echo -e "\n\033[1;41;37m 💀 致命错误：WARP-GO 双栈网络引擎植入失败！ \033[0m"
+S_VER="1.21.0"
+S_URL="https://github.com/SagerNet/sing-box/releases/download/v${S_VER}/sing-box-${S_VER}-linux-amd64.tar.gz"
+
+echo -e "正在直连拉取: \033[1;36m$S_URL\033[0m"
+# 有了真实的 WARP IPv4，不需要任何镜像，直接官方直连秒下！
+curl -sL --connect-timeout 10 -o /tmp/sbox.tar.gz "$S_URL"
+
+if [ -s /tmp/sbox.tar.gz ] && tar -tzf /tmp/sbox.tar.gz >/dev/null 2>&1; then
+    tar -xzf /tmp/sbox.tar.gz -C /tmp/ 2>/dev/null
+    mv -f /tmp/sing-box-*/sing-box /etc/s-box/sing-box 2>/dev/null
+    chmod +x /etc/s-box/sing-box
+    echo -e "\033[1;32m✅ Sing-box 核心 (v$S_VER) 拉取并解压成功！\033[0m"
+else
+    echo -e "\n\033[1;41;37m 💀 致命错误：Sing-box 核心拉取失败！ \033[0m"
     exit 1
 fi
 
@@ -173,7 +192,7 @@ cat << 'EOF' > /usr/bin/c
 SLA_LOG="/etc/s-box/stability.log"
 draw_ui() {
     clear; echo -e "\033[1;36m=======================================================================================================================\033[0m"
-    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.17 (最终卷 · 真理大盘) 🛡️\033[0m"
+    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.19 (最终卷 · 真理大盘) 🛡️\033[0m"
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
     printf "%-6s | %-6s | %-16s | %-16s | %-10s | %-14s | %s\n" "通道" "国家" "锁定 IP (目标)" "当前真实 IP" "对外气闸" "持续存活时长" "健康状态及行动指示"
     echo "-----------------------------------------------------------------------------------------------------------------------"
@@ -261,7 +280,7 @@ systemctl disable w_master sing-box psiphon1 psiphon2 psiphon3 psiphon4 >/dev/nu
 rm -f /etc/systemd/system/w_master.service /etc/systemd/system/sing-box.service /etc/systemd/system/psiphon*.service
 systemctl daemon-reload
 pkill -9 -f psiphon-tunnel-core; pkill -9 -f sing-box; pkill -9 -f w_master; pkill -9 -f sl
-bash <(curl -sL -A "Mozilla/5.0" https://raw.githubusercontent.com/fscarmen/warp/main/warp-go.sh) un >/dev/null 2>&1
+bash <(curl -sL -6 https://raw.githubusercontent.com/fscarmen/warp/main/warp-go.sh) un >/dev/null 2>&1
 rm -rf /etc/s-box /usr/local/bin/warp-go /usr/bin/warp-go
 rm -f /usr/bin/s[1-3] /usr/bin/l[1-3] /usr/bin/sl[1-3] /usr/bin/c /usr/bin/ss
 crontab -l 2>/dev/null | grep -v "stability.log" | crontab -
@@ -273,4 +292,4 @@ chmod +x /usr/bin/u
 # 11. 凌晨 4 点重启任务
 (crontab -l 2>/dev/null | grep -v "stability.log"; echo "0 4 * * * echo \"\$(date '+[%m-%d %H:%M:%S]') 🚀 === 凌晨 4:00 重置，开启新史记 ===\" > /etc/s-box/stability.log && /sbin/reboot") | crontab -
 
-echo -e "\n\033[1;32m🎉 天网系统 V10.17 部署完毕！\033[0m"
+echo -e "\n\033[1;32m🎉 天网系统 V10.19 部署完毕！\033[0m"
