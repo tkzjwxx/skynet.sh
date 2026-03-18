@@ -1,8 +1,8 @@
 #!/bin/bash
 # ====================================================================
-# 天网系统 V10.16 (最终卷 | 终极防劫持·PC浏览器指纹伪装版)
+# 天网系统 V10.17 (最终卷 | 摒弃镜像垃圾·官方直连绝对纯净版)
 # ====================================================================
-echo -e "\033[1;31m🔥 正在执行【天网 V10.16】全量创世重筑 (浏览器伪装防劫持版)...\033[0m"
+echo -e "\033[1;31m🔥 正在执行【天网 V10.17】全量创世重筑 (官方直连纯净版)...\033[0m"
 
 # 0. 强力拔除废弃源
 sed -i '/virtuozzo/d' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null
@@ -17,46 +17,26 @@ apt-get update -y >/dev/null 2>&1
 apt-get install -y curl socat net-tools psmisc wget jq unzip tar openssl cron >/dev/null 2>&1
 mkdir -p /etc/s-box/sub2 /etc/s-box/sub3
 
-# 3. 核心组件打捞 (🚨 终极防劫持：浏览器指纹强制注入)
-echo -e "\033[1;33m📦 正在打捞底层核心组件 (已启动 PC 浏览器防伪装)...\033[0m"
+# 3. 核心组件打捞 (🚨 绝对服从指令：只用官方直连)
+echo -e "\033[1;33m📦 正在打捞底层核心组件...\033[0m"
 curl -sL -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" -o /etc/s-box/psiphon-tunnel-core https://raw.githubusercontent.com/Psiphon-Labs/psiphon-tunnel-core-binaries/master/linux/psiphon-tunnel-core-x86_64
 chmod +x /etc/s-box/psiphon-tunnel-core
 
-S_VER="1.13.3"
-S_PATH="SagerNet/sing-box/releases/download/v${S_VER}/sing-box-${S_VER}-linux-amd64.tar.gz"
+# 直接使用指挥官提供的官方绝版链接，不加任何镜像！
+S_URL="https://github.com/SagerNet/sing-box/releases/download/v1.13.3/sing-box-1.13.3-linux-amd64.tar.gz"
 
-URLS=(
-    "https://ghfast.top/https://github.com/$S_PATH"
-    "https://ghproxy.net/https://github.com/$S_PATH"
-    "https://ghp.ci/https://github.com/$S_PATH"
-    "https://github.com/$S_PATH"
-)
+echo -e "正在官方直连拉取: \033[1;36m$S_URL\033[0m"
+HTTP_CODE=$(curl -sL -w "%{http_code}" -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" -o /tmp/sbox.tar.gz "$S_URL")
 
-SUCCESS=false
-for url in "${URLS[@]}"; do
-    echo -e "正在伪装拉取: \033[1;36m$url\033[0m"
-    # 使用 curl + 浏览器 UA 绕过盾，并捕获 HTTP 状态码
-    HTTP_CODE=$(curl -sL -w "%{http_code}" -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" -o /tmp/sbox.tar.gz "$url")
-    
-    if [ "$HTTP_CODE" == "200" ] && [ -s /tmp/sbox.tar.gz ]; then
-        if tar -tzf /tmp/sbox.tar.gz >/dev/null 2>&1; then
-            tar -xzf /tmp/sbox.tar.gz -C /tmp/ 2>/dev/null
-            mv -f /tmp/sing-box-*/sing-box /etc/s-box/sing-box 2>/dev/null
-            if [ -f /etc/s-box/sing-box ]; then
-                chmod +x /etc/s-box/sing-box
-                echo -e "\033[1;32m✅ Sing-box 核心 (v$S_VER) 拉取并解压成功！\033[0m"
-                SUCCESS=true
-                break
-            fi
-        fi
-    fi
-    echo -e "\033[1;31m⚠️ 当前源遭阻断 (HTTP $HTTP_CODE) 或文件损坏，正在切换...\033[0m"
-    rm -f /tmp/sbox.tar.gz
-done
-
-if [ "$SUCCESS" = false ]; then
-    echo -e "\n\033[1;41;37m 💀 致命错误：Sing-box 核心拉取失败！ \033[0m"
-    echo -e "\033[1;31m所有的下载源均无法连接，请检查 VPS 的国际网络状态。\033[0m"
+# 强制校验
+if [ "$HTTP_CODE" == "200" ] && [ -s /tmp/sbox.tar.gz ] && tar -tzf /tmp/sbox.tar.gz >/dev/null 2>&1; then
+    tar -xzf /tmp/sbox.tar.gz -C /tmp/ 2>/dev/null
+    mv -f /tmp/sing-box-*/sing-box /etc/s-box/sing-box 2>/dev/null
+    chmod +x /etc/s-box/sing-box
+    echo -e "\033[1;32m✅ Sing-box 核心官方直连拉取并解压成功！\033[0m"
+else
+    echo -e "\n\033[1;41;37m 💀 致命错误：Sing-box 核心官方拉取失败！(HTTP 状态码: $HTTP_CODE) \033[0m"
+    echo -e "\033[1;31m请检查 VPS 是否能正常连接 GitHub 官网。\033[0m"
     exit 1
 fi
 
@@ -193,7 +173,7 @@ cat << 'EOF' > /usr/bin/c
 SLA_LOG="/etc/s-box/stability.log"
 draw_ui() {
     clear; echo -e "\033[1;36m=======================================================================================================================\033[0m"
-    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.16 (最终卷 · 真理大盘) 🛡️\033[0m"
+    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.17 (最终卷 · 真理大盘) 🛡️\033[0m"
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
     printf "%-6s | %-6s | %-16s | %-16s | %-10s | %-14s | %s\n" "通道" "国家" "锁定 IP (目标)" "当前真实 IP" "对外气闸" "持续存活时长" "健康状态及行动指示"
     echo "-----------------------------------------------------------------------------------------------------------------------"
@@ -293,4 +273,4 @@ chmod +x /usr/bin/u
 # 11. 凌晨 4 点重启任务
 (crontab -l 2>/dev/null | grep -v "stability.log"; echo "0 4 * * * echo \"\$(date '+[%m-%d %H:%M:%S]') 🚀 === 凌晨 4:00 重置，开启新史记 ===\" > /etc/s-box/stability.log && /sbin/reboot") | crontab -
 
-echo -e "\n\033[1;32m🎉 天网系统 V10.16 部署完毕！\033[0m"
+echo -e "\n\033[1;32m🎉 天网系统 V10.17 部署完毕！\033[0m"
