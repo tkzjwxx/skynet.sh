@@ -1,8 +1,8 @@
 #!/bin/bash
 # ====================================================================
-# 天网系统 V10.13 (版本对齐版 | 修复 404 死链·回归 v1.9.3 稳如老狗)
+# 天网系统 V10.14 (全量对齐官方最新版 v1.21.0 | 强力熔断防卡死)
 # ====================================================================
-echo -e "\033[1;31m🔥 正在执行【天网 V10.13】全量创世重筑 (修复死链版)...\033[0m"
+echo -e "\033[1;31m🔥 正在执行【天网 V10.14】全量创世重筑 (对齐最新稳定版)...\033[0m"
 
 # 0. 强力拔除 HAX 废弃源
 sed -i '/virtuozzo/d' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null
@@ -17,13 +17,13 @@ apt-get update -y >/dev/null 2>&1
 apt-get install -y curl socat net-tools psmisc wget jq unzip tar openssl cron >/dev/null 2>&1
 mkdir -p /etc/s-box/sub2 /etc/s-box/sub3
 
-# 3. 核心组件打捞 (带强力熔断机制)
+# 3. 核心组件打捞 (百分百对齐官方最新版 v1.21.0)
 echo -e "\033[1;33m📦 正在打捞底层核心组件...\033[0m"
 wget -T 15 -t 3 -q --show-progress -O /etc/s-box/psiphon-tunnel-core https://raw.githubusercontent.com/Psiphon-Labs/psiphon-tunnel-core-binaries/master/linux/psiphon-tunnel-core-x86_64
 chmod +x /etc/s-box/psiphon-tunnel-core
 
-# 🚨 致命修正：退回官方绝对存在的稳定版本 v1.9.3
-S_VER="1.9.3"
+# 🚨 绝对服从事实：锁定官网最新版 v1.21.0
+S_VER="1.21.0"
 S_PATH="SagerNet/sing-box/releases/download/v${S_VER}/sing-box-${S_VER}-linux-amd64.tar.gz"
 
 # 使用三大高速镜像池
@@ -41,7 +41,7 @@ for url in "${URLS[@]}"; do
         tar -xzf /tmp/sbox.tar.gz -C /tmp/ && mv -f /tmp/sing-box-*/sing-box /etc/s-box/sing-box 2>/dev/null
         if [ -f /etc/s-box/sing-box ]; then
             chmod +x /etc/s-box/sing-box
-            echo -e "\033[1;32m✅ Sing-box 核心 (v1.9.3) 拉取并解压成功！\033[0m"
+            echo -e "\033[1;32m✅ Sing-box 核心 (v1.21.0) 拉取并解压成功！\033[0m"
             SUCCESS=true
             break
         fi
@@ -189,7 +189,7 @@ cat << 'EOF' > /usr/bin/c
 SLA_LOG="/etc/s-box/stability.log"
 draw_ui() {
     clear; echo -e "\033[1;36m=======================================================================================================================\033[0m"
-    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.13 (最终卷 · 真理大盘) 🛡️\033[0m"
+    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.14 (最终卷 · 真理大盘) 🛡️\033[0m"
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
     printf "%-6s | %-6s | %-16s | %-16s | %-10s | %-14s | %s\n" "通道" "国家" "锁定 IP (目标)" "当前真实 IP" "对外气闸" "持续存活时长" "健康状态及行动指示"
     echo "-----------------------------------------------------------------------------------------------------------------------"
@@ -289,4 +289,4 @@ chmod +x /usr/bin/u
 # 11. 凌晨 4 点重启任务
 (crontab -l 2>/dev/null | grep -v "stability.log"; echo "0 4 * * * echo \"\$(date '+[%m-%d %H:%M:%S]') 🚀 === 凌晨 4:00 重置，开启新史记 ===\" > /etc/s-box/stability.log && /sbin/reboot") | crontab -
 
-echo -e "\n\033[1;32m🎉 天网系统 V10.13 部署完毕！\033[0m"
+echo -e "\n\033[1;32m🎉 天网系统 V10.14 部署完毕！最新版本 v1.21.0 已挂载。\033[0m"
