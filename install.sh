@@ -1,8 +1,8 @@
 #!/bin/bash
 # ====================================================================
-# 天网系统 V10.23 (甬哥 WARP 手工断点介入版 | 修复 GitHub 直链)
+# 天网系统 V10.25 (甬哥 WARP 手工断点 + Sing-box 直链精准修复)
 # ====================================================================
-echo -e "\033[1;31m🔥 正在执行【天网 V10.23】全量创世重筑 (手工断点版)...\033[0m"
+echo -e "\033[1;31m🔥 正在执行【天网 V10.25】全量创世重筑...\033[0m"
 
 # 0. 强力拔除 HAX 废弃源
 sed -i '/virtuozzo/d' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null
@@ -12,9 +12,9 @@ systemctl stop psiphon1 psiphon2 psiphon3 psiphon4 sing-box w_master warp-go wg-
 killall -9 w_master 2>/dev/null
 rm -rf /etc/s-box /usr/bin/c /usr/bin/ss /usr/bin/u /usr/bin/s[1-3] /usr/bin/l[1-3] /usr/bin/sl[1-3]
 
-# 2. 基础依赖安装
+# 2. 基础依赖安装 (包含最新补充的 curl 和 wget)
 apt-get update -y >/dev/null 2>&1
-apt-get install -y curl socat net-tools psmisc wget jq unzip tar openssl cron >/dev/null 2>&1
+apt-get install -y curl wget socat net-tools psmisc jq unzip tar openssl cron >/dev/null 2>&1
 mkdir -p /etc/s-box/sub2 /etc/s-box/sub3
 
 # ====================================================================
@@ -22,11 +22,10 @@ mkdir -p /etc/s-box/sub2 /etc/s-box/sub3
 # ====================================================================
 echo -e "\033[1;32m🌐 第一阶段：正在拉取勇哥 WARP 引擎...\033[0m"
 
-# 🔥 核心修复：使用勇哥最新的 GitHub 官方仓库直链，放弃旧版 GitLab
+rm -f /root/CFwarp.sh
 curl -sL -o /root/CFwarp.sh https://raw.githubusercontent.com/yonggekkk/warp-yg/main/CFwarp.sh
 chmod +x /root/CFwarp.sh
 
-# 🚨 核心断点：交出控制权，人工介入
 echo -e "\n\033[1;45;37m ⏸️ 主脚本已挂起！即将唤出勇哥 WARP 菜单... \033[0m"
 echo -e "\033[1;36m👉 请根据你的机器情况手动安装 (纯v6机建议装双栈 或 单栈IPv4)。\033[0m"
 echo -e "\033[1;33m⚠️ 关键：安装成功并看到 WARP IP 后，请在菜单输入 0 退出勇哥脚本！\033[0m"
@@ -58,19 +57,20 @@ if [ "$V4_READY" = false ]; then
 fi
 
 # ====================================================================
-# 4. 有了 IPv4 护体，打捞核心组件如履平地 (API 动态捕获直链)
+# 4. 有了 IPv4 护体，打捞核心组件如履平地 (API 动态捕获直链修复)
 # ====================================================================
 echo -e "\033[1;33m📦 第二阶段：凭 IPv4 护盾，打捞底层核心组件...\033[0m"
 curl -sL -A "Mozilla/5.0" -o /etc/s-box/psiphon-tunnel-core https://raw.githubusercontent.com/Psiphon-Labs/psiphon-tunnel-core-binaries/master/linux/psiphon-tunnel-core-x86_64
 chmod +x /etc/s-box/psiphon-tunnel-core
 
-# 🚨 杜绝硬编码版本号：直接向 GitHub API 请求最新的 linux-amd64.tar.gz 直链
 echo -ne "正在向 GitHub API 请求 Sing-box 最新直链... "
-S_URL=$(curl -sL --connect-timeout 5 -A "Mozilla/5.0" "https://api.github.com/repos/SagerNet/sing-box/releases/latest" | grep "browser_download_url" | grep "linux-amd64.tar.gz" | head -n 1 | cut -d '"' -f 4)
+# 🚨 终极核弹级正则：强制抓取以 https 开头、以 linux-amd64.tar.gz 结尾的真实压缩包
+S_URL=$(curl -sL --connect-timeout 5 -A "Mozilla/5.0" "https://api.github.com/repos/SagerNet/sing-box/releases/latest" | grep -o 'https://[^"]*linux-amd64\.tar\.gz' | head -n 1)
 
-if [ -z "$S_URL" ]; then
-    echo -e "[\033[1;33mAPI受限，启用稳如老狗保底直链\033[0m]"
-    S_URL="https://github.com/SagerNet/sing-box/releases/download/v1.13.3/sing-box-1.13.3-linux-amd64.tar.gz"
+# 双重防爆校验：如果抓取失败或者不是 GitHub 链接，启用保底
+if [[ -z "$S_URL" || "$S_URL" != *"github.com"* ]]; then
+    echo -e "[\033[1;33mAPI抓取异常，启用稳如老狗保底直链\033[0m]"
+    S_URL="https://github.com/SagerNet/sing-box/releases/download/v1.10.1/sing-box-1.10.1-linux-amd64.tar.gz"
 else
     echo -e "[\033[1;32m成功捕获最新官方直链！\033[0m]"
 fi
@@ -120,12 +120,11 @@ WantedBy=multi-user.target
 SVC_EOF
 systemctl daemon-reload && systemctl enable --now sing-box >/dev/null 2>&1
 
-# 6. 初始化沙盒底层引擎 & UI 指令注入
+# 6. 初始化沙盒底层引擎
 for NODE in 1 2 3; do
     [ "$NODE" == "1" ] && { IN=2081; OUT=1081; DIR="/etc/s-box"; REG="US"; SVC="psiphon1"; }
     [ "$NODE" == "2" ] && { IN=2082; OUT=1082; DIR="/etc/s-box/sub2"; REG="GB"; SVC="psiphon2"; }
     [ "$NODE" == "3" ] && { IN=2083; OUT=1083; DIR="/etc/s-box/sub3"; REG="JP"; SVC="psiphon3"; }
-    
     cp /etc/s-box/psiphon-tunnel-core "$DIR/" 2>/dev/null
     cat > "$DIR/base.config" << P_EOF
 {"LocalHttpProxyPort":$((IN+16000)),"LocalSocksProxyPort":$IN,"PropagationChannelId":"FFFFFFFFFFFFFFFF","SponsorId":"FFFFFFFFFFFFFFFF","EgressRegion":"$REG","DataRootDirectory":"$DIR","RemoteServerListDownloadFilename":"remote_server_list","RemoteServerListSignaturePublicKey":"MIICIDANBgkqhkiG9w0BAQEFAAOCAg0AMIICCAKCAgEAt7Ls+/39r+T6zNW7GiVpJfzq/xvL9SBH5rIFnk0RXYEYavax3WS6HOD35eTAqn8AniOwiH+DOkvgSKF2caqk/y1dfq47Pdymtwzp9ikpB1C5OfAysXzBiwVJlCdajBKvBZDerV1cMvRzCKvKwRmvDmHgphQQ7WfXIGbRbmmk6opMBh3roE42KcotLFtqp0RRwLtcBRNtCdsrVsjiI1Lqz/lH+T61sGjSjQ3CHMuZYSQJZo/KrvzgQXpkaCTdbObxHqb6/+i1qaVOfEsvjoiyzTxJADvSytVtcTjijhPEV6XskJVHE1Zgl+7rATr/pDQkw6DPCNBS1+Y6fy7GstZALQXwEDN/qhQI9kWkHijT8ns+i1vGg00Mk/6J75arLhqcodWsdeG/M/moWgqQAnlZAGVtJI1OgeF5fsPpXu4kctOfuZlGjVZXQNW34aOzm8r8S0eVZitPlbhcPiR4gT/aSMz/wd8lZlzZYsje/Jr8u/YtlwjjreZrGRmG8KMOzukV3lLmMppXFMvl4bxv6YFEmIuTsOhbLTwFgh7KYNjodLj/LsqRVfwz31PgWQFTEPICV7GCvgVlPRxnofqKSjgTWI4mxDhBpVcATvaoBl1L/6WLbFvBsoAUBItWwctO2xalKxF5szhGm8lccoc5MZr8kfE0uxMgsxz4er68iCID+rsCAQM=","RemoteServerListUrl":"https://s3.amazonaws.com/psiphon/web/mjr4-p23r-puwl/server_list_compressed","UseIndistinguishableTLS":true}
@@ -211,7 +210,7 @@ cat << 'EOF' > /usr/bin/c
 SLA_LOG="/etc/s-box/stability.log"
 draw_ui() {
     clear; echo -e "\033[1;36m=======================================================================================================================\033[0m"
-    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.23 (最终卷 · 真理大盘) 🛡️\033[0m"
+    echo -e "\033[1;37m                                   🛡️ 天网系统 V10.25 (最终卷 · 真理大盘) 🛡️\033[0m"
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
     printf "%-6s | %-6s | %-16s | %-16s | %-10s | %-14s | %s\n" "通道" "国家" "锁定 IP (目标)" "当前真实 IP" "对外气闸" "持续存活时长" "健康状态及行动指示"
     echo "-----------------------------------------------------------------------------------------------------------------------"
@@ -288,30 +287,23 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload && systemctl enable --now w_master >/dev/null 2>&1
 
-# 10. 终极自毁退路：U 指令 (加入对本地脚本的清理)
+# 10. 终极自毁退路：U 指令
 cat << 'EOF' > /usr/bin/u
 #!/bin/bash
-clear; echo -e "\033[1;31m⚠️ 警告：正在启动【天网自毁回滚程序】！\033[0m\n👉 确定要彻底焚毁天网并恢复白板吗？(输入 y 确认): \c"
-read confirm; [ "$confirm" != "y" ] && echo "✅ 已取消。" && exit 0
-echo -e "\033[1;33m💀 正在物理超度...\033[0m"
+clear; echo -e "\033[1;31m⚠️ 正在启动【天网自毁回滚程序】\033[0m\n👉 确定要彻底焚毁天网吗？(输入 y 确认): \c"
+read confirm; [ "$confirm" != "y" ] && exit 0
 systemctl stop w_master sing-box psiphon1 psiphon2 psiphon3 psiphon4 warp-go wg-quick@wgcf >/dev/null 2>&1
 systemctl disable w_master sing-box psiphon1 psiphon2 psiphon3 psiphon4 >/dev/null 2>&1
 rm -f /etc/systemd/system/w_master.service /etc/systemd/system/sing-box.service /etc/systemd/system/psiphon*.service
-systemctl daemon-reload
-pkill -9 -f psiphon-tunnel-core; pkill -9 -f sing-box; pkill -9 -f w_master; pkill -9 -f sl
-
-# 尝试调用勇哥脚本卸载
+systemctl daemon-reload; pkill -9 -f psiphon-tunnel-core; pkill -9 -f sing-box; pkill -9 -f w_master; pkill -9 -f sl
 [ -f "/root/CFwarp.sh" ] && echo -e "\033[1;33m👉 请在弹出的菜单中选择卸载 WARP\033[0m" && bash /root/CFwarp.sh
-
-rm -rf /etc/s-box /usr/local/bin/warp-go /usr/bin/warp-go /root/CFwarp.sh
-rm -f /usr/bin/s[1-3] /usr/bin/l[1-3] /usr/bin/sl[1-3] /usr/bin/c /usr/bin/ss
+rm -rf /etc/s-box /usr/local/bin/warp-go /usr/bin/warp-go /root/CFwarp.sh /usr/bin/s[1-3] /usr/bin/l[1-3] /usr/bin/sl[1-3] /usr/bin/c /usr/bin/ss /usr/bin/u
 crontab -l 2>/dev/null | grep -v "stability.log" | crontab -
-echo -e "\033[1;32m🎉 物理超度完毕！VPS 已恢复纯净状态！\033[0m"
-rm -f /usr/bin/u
+echo "🎉 物理超度完毕！"
 EOF
 chmod +x /usr/bin/u
 
 # 11. 凌晨 4 点重启任务
 (crontab -l 2>/dev/null | grep -v "stability.log"; echo "0 4 * * * echo \"\$(date '+[%m-%d %H:%M:%S]') 🚀 === 凌晨 4:00 重置，开启新史记 ===\" > /etc/s-box/stability.log && /sbin/reboot") | crontab -
 
-echo -e "\n\033[1;32m🎉 天网系统 V10.23 (手工断点介入版) 部署完毕！\033[0m"
+echo -e "\n\033[1;32m🎉 天网系统 V10.25 部署完毕！\033[0m"
