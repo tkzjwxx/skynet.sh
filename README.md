@@ -1,40 +1,65 @@
-# skynet.sh
-天网 V9.6 终极部署脚本
-# 🛡️ 天网系统 (Skynet) V9.6 终极真理版
+# 🌐 Skynet Matrix V21 / 天网出站矩阵系统 V21
 
-apt-get update -y && apt-get install -y curl wget && sed -i '/virtuozzo/d' /etc/apt/sources.list.d/* 2>/dev/null ; bash <(curl -sL https://raw.githubusercontent.com/tkzjwxx/skynet.sh/main/install.sh)
-
-
-
-
-> 专为纯 IPv6 VPS（如 HAX、Woiden）打造的【工业级高可用双栈代理架构】。
-> 基于 Psiphon 底层协议与 Sing-box 核心路由，辅以 WARP-GO 强力赋能，实现全自动断线寻回与极品 IP 绝对锁定。
+[English](#english) | [简体中文](#chinese)
 
 ---
 
+<h2 id="english">🇺🇸 English</h2>
+
+**Skynet V21** is a highly advanced, automated, and self-healing proxy matrix deployed via a single script. Tailored for pure IPv6 VPS (like Woiden, Hax), it integrates Cloudflare WARP, Sing-box, and multiple Psiphon nodes into a seamless ecosystem.
+
+### ⚙️ Core Architecture
+* **Foundation**: WARP-GO (IPv4 egress) + `gai.conf` patch (IPv6 lock-in prevention).
+* **Forwarding Core**: Sing-box handles inbound Hysteria2 (native IPv6 direct connect) and VMess (for CF Argo Tunnel).
+* **Outbound Matrix**: 4 independent Psiphon proxy instances (US, GB, JP, SG regions) running locally on ports 1081-1084.
+* **Auto-Healing**: Includes a background watchdog (`w_master`) and chasing daemons (`sl`) to automatically detect dead IPs, recover connections, and restart routing gates.
+
+### ⌨️ Interactive Command Center
+Once installed, Skynet registers powerful single-letter/short commands globally:
+* `c` / `ss` : Global Dashboard (Monitor IP targets, real-time status, and SLA logs).
+* `v` : Generate node URLs (HY2 / VMess) and CF Argo Tunnel configuration guide.
+* `s1` / `s2` / `s3` : **Safe Gacha Mode** for US/GB/JP nodes. Interactively fish for clean IPs.
+* `l1` / `l2` / `l3` : **Berserk Mode**. Forcefully lock and retake a specific high-quality IP.
+* `s4` : **Ghost Scout**. A dedicated node for deep-sea IP fishing and blacklisting bad IPs.
+* `u` : Complete self-destruct and uninstall mechanism.
+
+*(Note: Automatically reboots daily at 4:00 AM to flush memory and reset the SLA logs).*
+
+### 🚀 Quick Install
+```bash
+bash <(curl -sL [https://raw.githubusercontent.com/tkzjwxx/skynet-v21-ipv6/main/install.sh](https://raw.githubusercontent.com/tkzjwxx/skynet-v21-ipv6/main/install.sh))
+```
+*(⚠️ Note: The script will pause and open the WARP menu. Please install WARP, verify you get an IPv4 address, and type `0` to exit the menu so the installation can complete!)*
+
 ---
 
-## 🚀 部署指南
+<h2 id="chinese">🇨🇳 简体中文</h2>
 
-### 1. 环境准备 (安装 curl)
-如果你使用的是刚刚重置的纯净白板 VPS（例如全新 Debian/Ubuntu 系统），可能连最基础的下载工具都没有。请先执行以下命令安装 `curl`：
+**天网系统 V21** 是一套专为纯 IPv6 VPS（Woiden/HAX 等）打造的自动化、多节点、带强力自愈机制的代理矩阵生态。
+
+突破传统单点脚本的极限，天网 V21 融合了 WARP 底层出站、Sing-box 分流引擎、以及四路独立的 Psiphon 战区，并配备了守护进程（哨兵），可实现节点断流全自动寻回。
+
+### ⚙️ 核心系统架构
+* **底层护盾**：WARP-GO（提供 IPv4） + wget/gai.conf 防卡死干预。
+* **分流中枢**：Sing-box（接管入站），提供 Hysteria2（公网原生直连）与 VMess（本地端口，专供 Argo Tunnel 内网穿透映射）。
+* **战区矩阵**：本地运行 4 个独立 Psiphon 引擎（对应 1081-1084 端口），分管 🇺🇸 US / 🇬🇧 GB / 🇯🇵 JP / 🇸🇬 SG 四大物理战区。
+* **自愈闭环**：独创 `w_master` 后台主控哨兵与 `sl` 寻回猎犬，IP 漂移假死全自动斩断气闸、重新抽卡并恢复连接。
+
+### ⌨️ 天网指挥部快捷键
+部署完成后，系统注入了极其丰富的全局实战指令：
+* `c` 或 `ss`：**全局大盘与实时监控**（上帝视角查看四路战区锁定 IP、健康度与存活时长）。
+* `v`：**节点链接提取器**（一键生成 HY2/VMess 配置，内含极其详细的 CF Argo 映射指南）。
+* `s1` / `s2` / `s3`：**战术安全抽卡**（呼出交互面板，进行极品 IP 单抽、鱼塘连抽，并动态切换国家战区）。
+* `l1` / `l2` / `l3`：**狂暴死磕引擎**（输入指定的极品 IP，系统死咬目标强行夺回）。
+* `s4`：**幽灵斥候旁路引擎**（独立于前三路的深海洗号池，支持恶意 IP 黑名单批量拦截机制）。
+* `u`：**物理超度自毁程序**（清理一切痕迹还你纯净系统）。
+
+*(💡 附加特性：系统注入了每日凌晨 4:00 自动重启任务，以重置状态和防爆休眠机制)*
+
+### 🚀 创世重筑部署指令
+请使用 `root` 权限登录纯 IPv6 机器执行：
 
 ```bash
-apt-get update -y && apt-get install curl -y
-确认你的机器已经可以正常连网后，直接复制并执行以下命令。系统将在 2 分钟内自动完成双栈赋能、核心编译、沙盒开辟与大盘组装：
-apt-get update -y && apt-get install -y curl wget && sed -i '/virtuozzo/d' /etc/apt/sources.list.d/* 2>/dev/null && curl -sSL "https://raw.githubusercontent.com/tkzjwxx/skynet.sh/main/install.sh" | bash
-核心操作手册
-系统部署完毕后，你可以在任意终端位置直接敲击以下快捷指令：
-
-ss：打开实时全息监控大盘（按 Ctrl+C 退出）。
-
-c 或 myip：静态查看一次大盘状态。
-
-s1 / s2 / s3：介入对应战区沙盒，执行【安全抽卡】（单抽/连抽/切国家）。
-
-l1 / l2 / l3：介入对应战区沙盒，执行【狂暴死磕】（强行锁定指定 IP）。
-
-s4：唤醒幽灵斥候旁路，执行深海打捞与黑名单管理。
-💀 核弹级一键物理卸载
-如果你想将 VPS 恢复到装机前的“白璧无瑕”状态，且不想重装系统。请直接复制以下整段“物理超度”指令。它将瞬间斩杀所有气闸、沙盒、哨兵进程，并销毁所有配置文件与 WARP：
-echo -e "\033[1;31m💀 正在启动【天网系统】核弹级销毁程序...\033[0m" && systemctl stop w_master sing-box psiphon1 psiphon2 psiphon3 psiphon4 2>/dev/null && systemctl disable w_master sing-box psiphon1 psiphon2 psiphon3 psiphon4 2>/dev/null && rm -f /etc/systemd/system/w_master.service /etc/systemd/system/sing-box.service /etc/systemd/system/psiphon*.service && systemctl daemon-reload && pkill -9 -f psiphon-tunnel-core 2>/dev/null ; pkill -9 -f sing-box 2>/dev/null ; pkill -9 -f w_master 2>/dev/null ; pkill -9 -f sl 2>/dev/null && fuser -k -9 1081/tcp 1082/tcp 1083/tcp 2081/tcp 2082/tcp 2083/tcp 2084/tcp 8443/udp 8444/udp 8445/udp >/dev/null 2>&1 && rm -rf /etc/s-box && rm -f /usr/bin/s[1-4] /usr/bin/l[1-3] /usr/bin/sl[1-3] /usr/bin/w_master /usr/bin/myip /usr/bin/c /usr/bin/ss /root/install_skynet.sh && (crontab -l 2>/dev/null | grep -v "/sbin/reboot" | crontab -) && warp-go u >/dev/null 2>&1 && systemctl stop warp-go 2>/dev/null && rm -rf /usr/local/bin/warp-go && echo -e "\033[1;32m✅ 物理超度完毕！所有气闸、沙盒、哨兵、大盘已彻底焚毁。你的 VPS 现已恢复纯净白板状态！\033[0m"
+bash <(curl -sL [https://raw.githubusercontent.com/tkzjwxx/skynet-v21-ipv6/main/install.sh](https://raw.githubusercontent.com/tkzjwxx/skynet-v21-ipv6/main/install.sh))
+```
+*(⚠️ 核心提示：脚本执行中途会挂起并唤出【勇哥 WARP 菜单】。请务必手动安装 WARP（推荐双栈），当屏幕提示成功获取 WARP IPv4 后，输入 `0` 退出菜单，天网主程序将自动接力完成全部闭环！)*
