@@ -1,13 +1,13 @@
 #!/bin/bash
 # ====================================================================
-# 天网系统 V14 (Argo隧道专供 | 修复 IPv6/IPv4 探针检测漂移 Bug)
+# 天网系统 V16 (Argo专供 | API 矩阵随机轮询防 403 + 正则过滤)
 # ====================================================================
-echo -e "\033[1;31m🔥 正在执行【天网 V14】全量创世重筑...\033[0m"
+echo -e "\033[1;31m🔥 正在执行【天网 V16】全量创世重筑...\033[0m"
 
 # 0. 强力拔除 HAX 废弃源
 sed -i '/virtuozzo/d' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null
 
-# 1. 清理旧环境 (保护 cloudflared 隧道进程不被误杀)
+# 1. 清理旧环境 (保护 cloudflared)
 systemctl stop psiphon1 psiphon2 psiphon3 psiphon4 sing-box w_master warp-go wg-quick@wgcf 2>/dev/null
 killall -9 w_master 2>/dev/null
 rm -rf /etc/s-box /usr/bin/c /usr/bin/ss /usr/bin/u /usr/bin/v /usr/bin/s[1-4] /usr/bin/l[1-4] /usr/bin/sl[1-4] /usr/bin/c[1-4]
@@ -18,15 +18,14 @@ apt-get install -y curl wget socat net-tools psmisc jq unzip tar openssl cron na
 mkdir -p /etc/s-box/sub2 /etc/s-box/sub3 /etc/s-box/sub4 /etc/s-box/blacklist
 
 # ====================================================================
-# 2.1 🚨 网络干预：仅针对 wget 开启 IPv6，撤销全局干扰以保护 curl
+# 2.1 网络干预：仅针对 wget 开启 IPv6
 # ====================================================================
 echo "prefer-family = IPv6" > ~/.wgetrc
-# 彻底清理可能导致 curl 误获取 IPv6 的霸道全局规则
 sed -i '/precedence ::ffff:0:0\/96  10/d' /etc/gai.conf 2>/dev/null
 echo -e "\033[1;32m✅ 已配置 wget 的 IPv6 防卡死补丁\033[0m"
 
 # ====================================================================
-# 3. 🚨 核心战术：挂起主程序，呼出勇哥 WARP 菜单交由人工接管
+# 3. WARP 部署
 # ====================================================================
 echo -e "\033[1;32m🌐 第一阶段：正在拉取勇哥 WARP 引擎...\033[0m"
 
@@ -45,7 +44,7 @@ echo -e "\n\033[1;32m▶️ WARP 菜单已关闭，天网主程序恢复执行�
 echo -e "\033[1;33m⏳ 正在校验 WARP IPv4 连通性...\033[0m"
 V4_READY=false
 for i in {1..6}; do
-    WARP_IP=$(curl -s4 -m 5 api.ipify.org 2>/dev/null)
+    WARP_IP=$(curl -s4 -m 5 api.ipify.org 2>/dev/null | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | head -n 1)
     if [ -n "$WARP_IP" ]; then
         echo -e "\033[1;32m✅ WARP IPv4 获取成功！出站 IP: $WARP_IP\033[0m"
         V4_READY=true
@@ -86,7 +85,7 @@ else
 fi
 
 # ====================================================================
-# 5. 配置核心路由与气闸 (6 协议入站规则)
+# 5. 配置核心路由与气闸
 # ====================================================================
 cat << 'CONFIG_EOF' > /etc/s-box/sing-box.json
 {
@@ -138,7 +137,7 @@ PW="PsiphonUS_2026"
 
 clear
 echo -e "\033[1;36m=================================================================\033[0m"
-echo -e "\033[1;32m🎉 天网系统 V14 - 节点配置与 Cloudflare 隧道映射指南\033[0m"
+echo -e "\033[1;32m🎉 天网系统 V16 - 节点配置与 Cloudflare 隧道映射指南\033[0m"
 echo -e "\033[1;36m=================================================================\033[0m"
 
 echo -e "\n\033[1;35m【第一部分】Cloudflare Zero Trust 网页端隧道配置参数\033[0m"
@@ -192,14 +191,13 @@ SVC_EOF
 done
 
 # ====================================================================
-# 8. 写入各节点的独立战术快捷键 (全部加入 -s4 强制 IPv4 锁定指令)
+# 8. 写入战术快捷键 (全系引入 5 大 API 随机轮询 + IPv4 正则滤网)
 # ====================================================================
 for NODE in 1 2 3; do
     [ "$NODE" == "1" ] && { IN_PORT=2081; OUT_PORT=1081; DIR="/etc/s-box"; REG="US"; SVC="psiphon1"; }
     [ "$NODE" == "2" ] && { IN_PORT=2082; OUT_PORT=1082; DIR="/etc/s-box/sub2"; REG="GB"; SVC="psiphon2"; }
     [ "$NODE" == "3" ] && { IN_PORT=2083; OUT_PORT=1083; DIR="/etc/s-box/sub3"; REG="JP"; SVC="psiphon3"; }
     
-    # c 清理黑名单
     cat << EOF > /usr/bin/c${NODE}
 #!/bin/bash
 > "\$DIR/tmp_pool.txt" 2>/dev/null
@@ -211,6 +209,7 @@ EOF
     cat << EOF > /usr/bin/s${NODE}
 #!/bin/bash
 NODE="${NODE}"; IN_PORT="${IN_PORT}"; OUT_PORT="${OUT_PORT}"; DIR="${DIR}"; SVC="${SVC}"; SLA_LOG="/etc/s-box/stability.log"
+APIS=("http://api.ipify.org" "http://icanhazip.com" "http://ifconfig.me/ip" "http://ident.me" "http://checkip.amazonaws.com")
 echo \$\$ > "\$DIR/s\${NODE}.manual"
 echo "\$(date '+[%m-%d %H:%M:%S]') 🛑 主人手动介入 S\${NODE} 抽卡" >> "\$SLA_LOG"
 trap 'trap - EXIT; echo "\$(date "+[%m-%d %H:%M:%S]") 🔰 退出模式" >> "\$SLA_LOG"; rm -f "\$DIR/s\${NODE}.manual" 2>/dev/null; exit 0' INT TERM EXIT HUP QUIT
@@ -228,13 +227,13 @@ echo -e "  \033[1;32m✅ 战区锁定: \$TR\033[0m\n\033[1;90m──────
 echo -e "\033[1;37m▶ 第二步：选择行动模式\033[0m"
 echo -e "  [1] 🎯 极品单抽    [2] 🎣 鱼塘连抽"
 echo -ne "\033[1;33m👉 模式 (默认1): \033[0m"; read m
-APIS=("http://api.ipify.org" "http://icanhazip.com")
 if [ "\$m" == "2" ]; then
     echo -ne "👉 连抽次数 (默认10): "; read c; [ -z "\$c" ] && c=10
     for ((i=1; i<=c; i++)); do
         echo -ne "\r\033[K\033[1;36m⏳ [\$i/\$c]\033[0m 抽卡中..."
         systemctl stop "\$SVC" 2>/dev/null; fuser -k -9 "\$IN_PORT/tcp" >/dev/null 2>&1; rm -rf "\$DIR/ca.psiphon"* 2>/dev/null; systemctl start "\$SVC"; sleep 6
-        IP=\$(curl -s4 -m 5 --socks5 127.0.0.1:\$IN_PORT \${APIS[\$RANDOM % 2]} 2>/dev/null)
+        API=\${APIS[\$RANDOM % \${#APIS[@]}]}
+        IP=\$(curl -s4 -m 5 --socks5 127.0.0.1:\$IN_PORT \$API 2>/dev/null | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | head -n 1)
         [ -n "\$IP" ] && echo "\$IP" >> "\$DIR/tmp_pool.txt"
     done
     echo -e "\n\n\033[1;32m📊 鱼塘打捞结果:\033[0m"; sort "\$DIR/tmp_pool.txt" | uniq -c; rm -f "\$DIR/tmp_pool.txt"
@@ -242,7 +241,8 @@ else
     while true; do
         systemctl stop "\$SVC" 2>/dev/null; fuser -k -9 "\$IN_PORT/tcp" >/dev/null 2>&1; rm -rf "\$DIR/ca.psiphon"* 2>/dev/null; systemctl start "\$SVC"
         echo -ne "\r\033[K\033[1;36m⏳ 正在盲抽...\033[0m"; sleep 7
-        IP=\$(curl -s4 -m 5 --socks5 127.0.0.1:\$IN_PORT \${APIS[\$RANDOM % 2]} 2>/dev/null)
+        API=\${APIS[\$RANDOM % \${#APIS[@]}]}
+        IP=\$(curl -s4 -m 5 --socks5 127.0.0.1:\$IN_PORT \$API 2>/dev/null | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | head -n 1)
         [ -z "\$IP" ] && continue
         echo -e "\n\033[1;32m🎯 命中 IP: \033[1;37m\$IP\033[0m"
         echo -ne "\033[1;33m✨ 满意按 [Y] 锁定并开启气闸，按回车重抽: \033[0m"; read k
@@ -259,6 +259,7 @@ EOF
     cat << EOF > /usr/bin/l${NODE}
 #!/bin/bash
 NODE="${NODE}"; IN_PORT="${IN_PORT}"; OUT_PORT="${OUT_PORT}"; DIR="${DIR}"; SVC="${SVC}"; SLA_LOG="/etc/s-box/stability.log"
+APIS=("http://api.ipify.org" "http://icanhazip.com" "http://ifconfig.me/ip" "http://ident.me" "http://checkip.amazonaws.com")
 echo \$\$ > "\$DIR/s\${NODE}.manual"
 echo "\$(date '+[%m-%d %H:%M:%S]') 🛑 主人手动介入 L\${NODE} 死磕" >> "\$SLA_LOG"
 trap 'trap - EXIT; echo "\$(date "+[%m-%d %H:%M:%S]") 🔰 退出模式" >> "\$SLA_LOG"; rm -f "\$DIR/s\${NODE}.manual" 2>/dev/null; exit 0' INT TERM EXIT HUP QUIT
@@ -273,7 +274,8 @@ echo -e "\033[1;90m────────────────────�
 while true; do
     ((a++)); echo -ne "\r\033[K\033[1;35m⏳ [第 \$a 次]\033[0m 字节级强行夺回中..."; systemctl stop "\$SVC" 2>/dev/null
     fuser -k -9 "\$IN_PORT/tcp" >/dev/null 2>&1; rm -rf "\$DIR/ca.psiphon"* 2>/dev/null; systemctl start "\$SVC"; sleep 8
-    IP=\$(curl -s4 -m 5 --socks5 127.0.0.1:\$IN_PORT api.ipify.org 2>/dev/null)
+    API=\${APIS[\$RANDOM % \${#APIS[@]}]}
+    IP=\$(curl -s4 -m 5 --socks5 127.0.0.1:\$IN_PORT \$API 2>/dev/null | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | head -n 1)
     if [ "\$IP" == "\$TARGET" ]; then
         echo -e "\n\n\033[1;32m██████████████████████████████████████████████████████\033[0m"
         echo -e "\033[1;32m█                                                    █\033[0m"
@@ -292,7 +294,7 @@ EOF
 #!/bin/bash
 NODE="${NODE}"; IN_PORT="${IN_PORT}"; OUT_PORT="${OUT_PORT}"; DIR="${DIR}"; SVC="${SVC}"; SLA_LOG="/etc/s-box/stability.log"
 TARGET=\$(cat "\$DIR/s\${NODE}.lock" 2>/dev/null); [ -z "\$TARGET" ] && exit 0
-APIS=("http://api.ipify.org" "http://icanhazip.com" "http://ifconfig.me/ip")
+APIS=("http://api.ipify.org" "http://icanhazip.com" "http://ifconfig.me/ip" "http://ident.me" "http://checkip.amazonaws.com")
 ATTEMPTS=0; CHASE_START=\$(date +%s)
 echo "\$(date '+[%m-%d %H:%M:%S]') 🕵️ 诊断结果：确认为假死/漂移。开始执行【S\${NODE}】寻回任务，目标：\$TARGET" >> "\$SLA_LOG"
 while true; do
@@ -305,7 +307,8 @@ while true; do
     echo "\$(date '+[%m-%d %H:%M:%S]') [TRACE] S\${NODE} 正在进行第 \$ATTEMPTS 次抽卡尝试..." >> "\$SLA_LOG"
     systemctl stop "\$SVC" 2>/dev/null; fuser -k -9 "\$IN_PORT/tcp" >/dev/null 2>&1; rm -rf "\$DIR/ca.psiphon"* 2>/dev/null; systemctl start "\$SVC"
     sleep 7
-    IP=\$(curl -s4 -m 5 --socks5 127.0.0.1:\$IN_PORT \${APIS[\$RANDOM % 3]} 2>/dev/null)
+    API=\${APIS[\$RANDOM % \${#APIS[@]}]}
+    IP=\$(curl -s4 -m 5 --socks5 127.0.0.1:\$IN_PORT \$API 2>/dev/null | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | head -n 1)
     if [ "\$IP" == "\$TARGET" ]; then
         rm -f "\$DIR/s\${NODE}.hibernating" 2>/dev/null
         echo "\$(date '+[%m-%d %H:%M:%S]') 🟢 捕获成功！S\${NODE} 第 \$ATTEMPTS 次尝试命中目标 IP：\$IP" >> "\$SLA_LOG"
@@ -321,7 +324,7 @@ done
 cat << 'EOF' > /usr/bin/s4
 #!/bin/bash
 DIR="/etc/s-box/sub4"; BLACKLIST_FILE="/etc/s-box/blacklist/bad_ips.txt"; SVC="psiphon4"; IN_PORT=2084
-APIS=("http://api.ipify.org" "http://icanhazip.com" "http://ifconfig.me/ip"); touch "$BLACKLIST_FILE"
+APIS=("http://api.ipify.org" "http://icanhazip.com" "http://ifconfig.me/ip" "http://ident.me" "http://checkip.amazonaws.com"); touch "$BLACKLIST_FILE"
 trap 'echo -e "\n\033[1;33m🛑 已中止 S4 打捞作业。\033[0m"; exit 0' INT TERM EXIT HUP QUIT
 clear; echo -e "\033[1;36m   👻 [S4] 幽灵斥候 - 旁路洗号引擎 \033[0m\n   黑名单数: $(wc -l < $BLACKLIST_FILE 2>/dev/null || echo 0)\n"
 echo "  [1] 启动深海打捞   [2] 管理高级黑名单   [3] 退出"
@@ -340,7 +343,8 @@ elif [ "$MENU_CHOICE" == "1" ]; then
     while [ $ATTEMPTS -lt $SCAN_MAX ]; do
         ((ATTEMPTS++)); echo -ne "\r\033[K🔍 [$ATTEMPTS/$SCAN_MAX] 下网..."
         systemctl stop "$SVC" >/dev/null 2>&1; fuser -k -9 "$IN_PORT/tcp" >/dev/null 2>&1; rm -rf "$DIR/ca.psiphon"* >/dev/null 2>&1; systemctl start "$SVC"; sleep 8
-        IP=$(curl -s4 -m 5 --socks5 127.0.0.1:$IN_PORT ${APIS[$RANDOM % ${#APIS[@]}]} 2>/dev/null | tr -d '[:space:]')
+        API=${APIS[$RANDOM % ${#APIS[@]}]}
+        IP=$(curl -s4 -m 5 --socks5 127.0.0.1:$IN_PORT $API 2>/dev/null | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | head -n 1)
         if [ -n "$IP" ]; then
             if grep -q "^${IP%.*}\|^\(${IP}\)" "$BLACKLIST_FILE" 2>/dev/null; then echo -e "\n🚫 触发黑名单: $IP"; else echo -e "\n🌟 捕获纯净极品: \033[1;32m$IP\033[0m"; VALID_IPS+=("$IP"); fi
         fi
@@ -359,14 +363,13 @@ chmod +x /usr/bin/s4
 # ====================================================================
 # 9. 全局大盘与后台守卫引擎
 # ====================================================================
-
-# 全局大盘 c
 cat << 'EOF' > /usr/bin/c
 #!/bin/bash
+APIS=("http://api.ipify.org" "http://icanhazip.com" "http://ifconfig.me/ip" "http://ident.me" "http://checkip.amazonaws.com")
 draw_dashboard() {
     clear
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
-    echo -e "\033[1;37m                                   🛡️ 天网系统 V14 (全量生死录·动静分离版) 🛡️\033[0m"
+    echo -e "\033[1;37m                                   🛡️ 天网系统 V16 (全量生死录·API轮询版) 🛡️\033[0m"
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
     printf "%-6s | %-6s | %-16s | %-16s | %-10s | %-14s | %s\n" "通道" "国家" "锁定 IP (目标)" "当前真实 IP" "对外气闸" "持续存活时长" "健康状态及行动指示"
     echo "-----------------------------------------------------------------------------------------------------------------------"
@@ -375,7 +378,9 @@ draw_dashboard() {
         [ "$N" == "2" ] && { IN=2082; OUT=1082; W="/etc/s-box/sub2"; R="S2"; }
         [ "$N" == "3" ] && { IN=2083; OUT=1083; W="/etc/s-box/sub3"; R="S3"; }
         REG=$(grep -oP '"EgressRegion": "\K[A-Z]+' $W/base.config 2>/dev/null || echo "US")
-        TAR=$(cat "$W/s$N.lock" 2>/dev/null); CUR=$(curl -s4 -m 4 --socks5 127.0.0.1:$IN api.ipify.org 2>/dev/null)
+        TAR=$(cat "$W/s$N.lock" 2>/dev/null)
+        API=${APIS[$RANDOM % ${#APIS[@]}]}
+        CUR=$(curl -s4 -m 4 --socks5 127.0.0.1:$IN $API 2>/dev/null | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | head -n 1)
         if netstat -tlnp 2>/dev/null | grep -q ":$OUT "; then G_R="🟢开启"; else G_R="🔴熔断"; fi
         UP="--:--:--"; if [ -f "$W/s$N.uptime" ] && [ -n "$TAR" ]; then
             ST=$(cat "$W/s$N.uptime" 2>/dev/null); NW=$(date +%s); DF=$((NW - ST))
@@ -388,62 +393,48 @@ draw_dashboard() {
     echo -e "\033[1;37m                                   📋 任务史记 (凌晨 4:00 起始全记录)                               \033[0m"
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
 }
-
 TODAY=$(date '+%m-%d')
 if [[ "$1" == "--live" ]]; then
-    while true; do
-        draw_dashboard
-        grep "^\[$TODAY" /etc/s-box/stability.log | grep -vE "主人|退出模式|手动介入" | tail -n 25
-        echo -e "\033[1;90m\n[提示] 正在实时监控中... 按 Ctrl+C 退出并停止监控\033[0m"
-        sleep 2
-    done
+    while true; do draw_dashboard; grep "^\[$TODAY" /etc/s-box/stability.log | grep -vE "主人|退出模式|手动介入" | tail -n 25; echo -e "\033[1;90m\n[提示] 正在实时监控中... 按 Ctrl+C 退出\033[0m"; sleep 2; done
 else
-    draw_dashboard
-    LOG_CONTENT=$(grep "^\[$TODAY" /etc/s-box/stability.log | grep -vE "TRACE|主人|退出模式|手动介入")
-    if [ -z "$LOG_CONTENT" ]; then echo "   等待凌晨 4:00 后的首条诊断记录..."; else echo "$LOG_CONTENT"; fi
+    draw_dashboard; LOG_CONTENT=$(grep "^\[$TODAY" /etc/s-box/stability.log | grep -vE "TRACE|主人|退出模式|手动介入"); if [ -z "$LOG_CONTENT" ]; then echo "   等待凌晨 4:00 后的首条诊断记录..."; else echo "$LOG_CONTENT"; fi
     echo -e "\033[1;36m=======================================================================================================================\033[0m"
 fi
 EOF
 chmod +x /usr/bin/c
 
-# 动态监控 ss 
 cat << 'EOF' > /usr/bin/ss
 #!/bin/bash
 /usr/bin/c --live
 EOF
 chmod +x /usr/bin/ss
 
-# 真理哨兵 w_master
 cat > /usr/bin/w_master << 'EOF'
 #!/bin/bash
 SLA_LOG="/etc/s-box/stability.log"
 APIS=("http://api.ipify.org" "http://icanhazip.com" "http://ifconfig.me/ip" "http://ident.me" "http://checkip.amazonaws.com")
 echo "$(date '+[%m-%d %H:%M:%S]') 🚀 VPS 系统开机/重启完成！天网哨兵已上线并重新接管大盘！" >> "$SLA_LOG"
-
 get_node_ip() {
     local PORT=$1; local IP=""
     local RAND_API=${APIS[$RANDOM % ${#APIS[@]}]}
-    IP=$(curl -s4 -m 6 --socks5 127.0.0.1:$PORT $RAND_API 2>/dev/null | tr -d '[:space:]')
+    IP=$(curl -s4 -m 6 --socks5 127.0.0.1:$PORT $RAND_API 2>/dev/null | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | head -n 1)
     [ -n "$IP" ] && { echo "$IP"; return; }
     sleep 2
     for api in "${APIS[@]}"; do
         [ "$api" == "$RAND_API" ] && continue
-        IP=$(curl -s4 -m 6 --socks5 127.0.0.1:$PORT $api 2>/dev/null | tr -d '[:space:]')
+        IP=$(curl -s4 -m 6 --socks5 127.0.0.1:$PORT $api 2>/dev/null | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | head -n 1)
         [ -n "$IP" ] && { echo "$IP"; return; }
     done
     echo ""
 }
-
 while true; do
     for NODE in 1 2 3; do
         [ "$NODE" == "1" ] && { IN_PORT=2081; OUT_PORT=1081; WORK="/etc/s-box"; }
         [ "$NODE" == "2" ] && { IN_PORT=2082; OUT_PORT=1082; WORK="/etc/s-box/sub2"; }
         [ "$NODE" == "3" ] && { IN_PORT=2083; OUT_PORT=1083; WORK="/etc/s-box/sub3"; }
-
         if [ -f "$WORK/s${NODE}.manual" ]; then if kill -0 $(cat "$WORK/s${NODE}.manual" 2>/dev/null | tr -d '[:space:]') 2>/dev/null; then continue; fi; rm -f "$WORK/s${NODE}.manual" 2>/dev/null; fi
         LOCK="$WORK/s${NODE}.lock"; [ ! -f "$LOCK" ] && continue
         TARGET=$(cat "$LOCK" | tr -d '[:space:]'); [ -z "$TARGET" ] && continue
-
         CURRENT=$(get_node_ip $IN_PORT)
         if [[ -n "$CURRENT" && "$CURRENT" == "$TARGET" ]]; then
             if ! netstat -tlnp 2>/dev/null | grep -q ":$OUT_PORT "; then
@@ -495,6 +486,7 @@ systemctl daemon-reload; pkill -9 -f psiphon-tunnel-core; pkill -9 -f sing-box; 
 [ -f "/root/CFwarp.sh" ] && echo -e "\033[1;33m👉 请在弹出的菜单中选择卸载 WARP\033[0m" && bash /root/CFwarp.sh
 rm -rf /etc/s-box /usr/local/bin/warp-go /usr/bin/warp-go /root/CFwarp.sh /usr/bin/s[1-4] /usr/bin/l[1-4] /usr/bin/sl[1-4] /usr/bin/c[1-4] /usr/bin/c /usr/bin/ss /usr/bin/u /usr/bin/v
 crontab -l 2>/dev/null | grep -v "stability.log" | crontab -
+sed -i '/prefer-family = IPv6/d' ~/.wgetrc 2>/dev/null
 echo "🎉 物理超度完毕！"
 EOF
 chmod +x /usr/bin/u
@@ -502,4 +494,4 @@ chmod +x /usr/bin/u
 # 11. 凌晨 4 点重启任务
 (crontab -l 2>/dev/null | grep -v "stability.log"; echo "0 4 * * * echo \"\$(date '+[%m-%d %H:%M:%S]') 🚀 === 凌晨 4:00 重置，开启新史记 ===\" > /etc/s-box/stability.log && /sbin/reboot") | crontab -
 
-echo -e "\n\033[1;32m🎉 天网系统 V14 部署完毕！快输入 v 获取专属分享链接吧！\033[0m"
+echo -e "\n\033[1;32m🎉 天网系统 V16 部署完毕！再也不怕 API 封锁限流了！\033[0m"
