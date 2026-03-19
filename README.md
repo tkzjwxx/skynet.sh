@@ -16,7 +16,7 @@
 ### 🚀 Step 1: Install Skynet V21
 Run the following chained command as `root` on your pure IPv6 VPS. It will automatically install `curl` if missing and start the deployment:
 ```bash
-apt-get update -y && apt-get install -y curl && bash <(curl -sL [https://raw.githubusercontent.com/tkzjwxx/skynet-v21-ipv6/main/install.sh](https://raw.githubusercontent.com/tkzjwxx/skynet-v21-ipv6/main/install.sh))
+apt-get update -y && apt-get install -y curl && bash <(curl -sL [https://raw.githubusercontent.com/tkzjwxx/skynet-v21-ipv6/main/install.sh](https://raw.githubusercontent.com/tkzjwxx/skynet-v21-ipv6/main/install.sh)
 ```
 *(⚠️ Note: The script will pause and open the WARP menu. Please install WARP, verify you get an IPv4 address, and type `0` to exit the menu so the installation can complete.)*
 
@@ -51,7 +51,7 @@ Type these shortcuts anywhere in your terminal:
 ### 🚀 第一步：执行创世部署
 请使用 `root` 权限登录纯 IPv6 机器执行以下链式指令（自带环境依赖补全，防止纯净系统报错）：
 ```bash
-apt-get update -y && apt-get install -y curl && bash <(curl -sL [https://raw.githubusercontent.com/tkzjwxx/skynet-v21-ipv6/main/install.sh](https://raw.githubusercontent.com/tkzjwxx/skynet-v21-ipv6/main/install.sh))
+apt-get update -y && apt-get install -y curl && bash <(curl -sL [https://raw.githubusercontent.com/tkzjwxx/skynet-v21-ipv6/main/install.sh](https://raw.githubusercontent.com/tkzjwxx/skynet-v21-ipv6/main/install.sh)
 ```
 *(⚠️ 核心提示：执行中途会挂起并唤出【WARP 菜单】。请手动安装 WARP，当屏幕提示成功获取 WARP IPv4 后，输入 `0` 退出菜单，主程序将自动接力完成全量部署！)*
 
